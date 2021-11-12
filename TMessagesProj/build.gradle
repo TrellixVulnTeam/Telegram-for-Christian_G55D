@@ -43,10 +43,8 @@ dependencies {
 
 android {
     compileSdkVersion 31
-    buildToolsVersion '31.0.0'
-    ndkVersion "21.4.7075529"
 
-    defaultConfig.applicationId = "org.telegram.messenger"
+    defaultConfig.applicationId = "org.telegram.christian"
 
     sourceSets.main.jniLibs.srcDirs = ['./jni/']
 
@@ -60,6 +58,13 @@ android {
         disable 'MissingTranslation'
         disable 'ExtraTranslation'
         disable 'BlockedPrivateApi'
+    }
+
+    bundle {
+        // app bundle should not split languages, because we support switch language
+        language {
+            enableSplit = false
+        }
     }
 
     dexOptions {
@@ -299,11 +304,11 @@ android {
         }
     }
 
-    defaultConfig.versionCode = 2462
+    defaultConfig.versionCode = 2466
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
-            outputFileName = "app.apk"
+            outputFileName = "Telegram.apk"
             output.versionCodeOverride = defaultConfig.versionCode * 10 + variant.productFlavors.get(0).abiVersionCode
         }
     }
@@ -318,7 +323,7 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 30
-        versionName "8.2.1"
+        versionName "8.2.3"
 
         vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']
 

@@ -12,6 +12,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
 
+import androidx.multidex.BuildConfig;
+
 public class BuildVars {
 
     public static boolean DEBUG_VERSION = false;
@@ -20,13 +22,13 @@ public class BuildVars {
     public static boolean USE_CLOUD_STRINGS = true;
     public static boolean CHECK_UPDATES = true;
     public static boolean NO_SCOPED_STORAGE = Build.VERSION.SDK_INT <= 29;
-    public static int BUILD_VERSION = 2466;
-    public static String BUILD_VERSION_STRING = "8.2.3";
+    public static int BUILD_VERSION = BuildConfig.VERSION_CODE;
+    public static String BUILD_VERSION_STRING = BuildConfig.VERSION_NAME;
     public static int APP_ID = 4;
     public static String APP_HASH = "014b35b6184100b085b0d0572f9b5103";
 
     public static String SMS_HASH = isStandaloneApp() ? "w0lkcmTZkKh" : (DEBUG_VERSION ? "O2P2z+/jBpJ" : "oLeq9AcOZkT");
-    public static String PLAYSTORE_APP_URL = "https://play.google.com/store/apps/details?id=org.telegram.messenger";
+    public static String PLAYSTORE_APP_URL = "https://play.google.com/store/apps/details?id=org.telegram.christian";
 
     static {
         if (ApplicationLoader.applicationContext != null) {
@@ -36,17 +38,21 @@ public class BuildVars {
     }
 
     private static Boolean standaloneApp;
+
     public static boolean isStandaloneApp() {
         if (standaloneApp == null) {
-            standaloneApp = ApplicationLoader.applicationContext != null && "org.telegram.messenger.web".equals(ApplicationLoader.applicationContext.getPackageName());
+            standaloneApp = ApplicationLoader.applicationContext != null
+                    && ApplicationLoader.applicationContext.getPackageName().endsWith(".web");
         }
         return standaloneApp;
     }
 
     private static Boolean betaApp;
+
     public static boolean isBetaApp() {
         if (betaApp == null) {
-            betaApp = ApplicationLoader.applicationContext != null && "org.telegram.messenger.beta".equals(ApplicationLoader.applicationContext.getPackageName());
+            betaApp = ApplicationLoader.applicationContext != null
+                    && ApplicationLoader.applicationContext.getPackageName().endsWith(".beta");
         }
         return betaApp;
     }
