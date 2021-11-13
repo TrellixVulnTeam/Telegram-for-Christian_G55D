@@ -2462,7 +2462,9 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
         }
         if (isVoipIntent) {
             VoIPFragment.show(this, intentAccount[0]);
-        }
+        } else if (action != null && action.equals("voip_group_ring") && VoIPService.getSharedInstance() != null)
+            VoIPService.getSharedInstance().startInCallActivity();
+
         if (!showGroupVoip && (intent == null || !Intent.ACTION_MAIN.equals(intent.getAction())) && GroupCallActivity.groupCallInstance != null) {
             GroupCallActivity.groupCallInstance.dismiss();
         }

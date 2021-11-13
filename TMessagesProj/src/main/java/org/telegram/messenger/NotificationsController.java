@@ -53,10 +53,13 @@ import androidx.core.content.LocusIdCompat;
 import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
 import androidx.core.graphics.drawable.IconCompat;
+
+import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.SparseArray;
 
 import org.telegram.messenger.support.LongSparseIntArray;
+import org.telegram.messenger.voip.VoIPService;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.BubbleActivity;
@@ -138,7 +141,7 @@ public class NotificationsController extends BaseController {
         }
         audioManager = (AudioManager) ApplicationLoader.applicationContext.getSystemService(Context.AUDIO_SERVICE);
     }
-    
+
     private static volatile NotificationsController[] Instance = new NotificationsController[UserConfig.MAX_ACCOUNT_COUNT];
 
     public static NotificationsController getInstance(int num) {
@@ -3917,7 +3920,7 @@ public class NotificationsController extends BaseController {
 
             void call() {
                 if (BuildVars.LOGS_ENABLED) {
-                    FileLog.w("show dialog notification with id " + id + " " + dialogId +  " user=" + user + " chat=" + chat);
+                    FileLog.w("show dialog notification with id " + id + " " + dialogId + " user=" + user + " chat=" + chat);
                 }
                 try {
                     notificationManager.notify(id, notification.build());
@@ -4428,6 +4431,7 @@ public class NotificationsController extends BaseController {
             }
             holders.add(new NotificationHolder(internalId, dialogId, name, user, chat, builder));
             wearNotificationsIds.put(dialogId, internalId);
+            dealGroupCallRinging(lastMessageObject);
         }
 
         if (useSummaryNotification) {
@@ -4472,6 +4476,62 @@ public class NotificationsController extends BaseController {
             if (!unsupportedNotificationShortcut() && !ids.isEmpty()) {
                 ShortcutManagerCompat.removeDynamicShortcuts(ApplicationLoader.applicationContext, ids);
             }
+        }
+    }
+
+    /**
+     * Add feature of group call ringing, use a fake VoIPService call to give ringing
+     *
+     * @param messageObject
+     */
+    private void dealGroupCallRinging(MessageObject messageObject) {
+        // Start voice call or invited to a group call
+        try {
+            if (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionInviteToGroupCall) {
+                long chat_id = messageObject.messageOwner.peer_id.chat_id != 0 ? messageObject.messageOwner.peer_id.chat_id : messageObject.messageOwner.peer_id.channel_id;
+                long userId;
+
+                userId = messageObject.messageOwner.peer_id.user_id;
+                if (userId == 0 && messageObject.messageOwner.action.users.size() == 1) {
+                    userId = messageObject.messageOwner.action.users.get(0);
+                }
+
+                if (userId == 0 || chat_id == 0 || getUserConfig().getClientUserId() != userId) {
+                    return;
+                }
+
+                boolean notificationsDisabled = false;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !NotificationManagerCompat.from(ApplicationLoader.applicationContext).areNotificationsEnabled()) {
+                    notificationsDisabled = true;
+                    if (ApplicationLoader.mainInterfacePaused || !ApplicationLoader.isScreenOn) {
+                        return;
+                    }
+                }
+
+                TelephonyManager tm = (TelephonyManager) ApplicationLoader.applicationContext.getSystemService(Context.TELEPHONY_SERVICE);
+                if (VoIPService.getSharedInstance() != null || tm.getCallState() != TelephonyManager.CALL_STATE_IDLE) {
+                    return;
+                }
+
+                Intent intent = new Intent(ApplicationLoader.applicationContext, VoIPService.class);
+                intent.putExtra("is_outgoing", false);
+                intent.putExtra("chat_id", chat_id);
+                intent.putExtra("account", currentAccount);
+                intent.putExtra("group_call_ringing", true);
+                intent.putExtra("from_invite", true);
+                intent.putExtra("notifications_disabled", notificationsDisabled);
+                if (!notificationsDisabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    ApplicationLoader.applicationContext.startForegroundService(intent);
+                } else {
+                    ApplicationLoader.applicationContext.startService(intent);
+                }
+
+                if (ApplicationLoader.mainInterfacePaused || !ApplicationLoader.isScreenOn) {
+                    MessagesController.getInstance(currentAccount).ignoreSetOnline = true;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

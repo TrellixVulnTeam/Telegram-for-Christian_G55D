@@ -749,8 +749,8 @@ public class MessagesController extends BaseController implements NotificationCe
         canRevokePmInbox = mainPreferences.getBoolean("canRevokePmInbox", canRevokePmInbox);
         preloadFeaturedStickers = mainPreferences.getBoolean("preloadFeaturedStickers", false);
         youtubePipType = mainPreferences.getString("youtubePipType", "disabled");
-        keepAliveService = mainPreferences.getBoolean("keepAliveService", false);
-        backgroundConnection = mainPreferences.getBoolean("keepAliveService", false);
+        keepAliveService = mainPreferences.getBoolean("keepAliveService", true);
+        backgroundConnection = mainPreferences.getBoolean("keepAliveService", true);
         promoDialogId = mainPreferences.getLong("proxy_dialog", 0);
         nextPromoInfoCheckTime = mainPreferences.getInt("nextPromoInfoCheckTime", 0);
         promoDialogType = mainPreferences.getInt("promo_dialog_type", 0);
@@ -13204,6 +13204,40 @@ public class MessagesController extends BaseController implements NotificationCe
                             TLRPC.ChatFull chatFull = getChatFull(update.chat_id);
                             if (chatFull != null && (chatFull.call == null || chatFull.call != null && chatFull.call.id != update.call.id)) {
                                 loadFullChat(update.chat_id, 0, true);
+                            }
+
+                            if (update.call.participants_count > 0) {
+                                boolean notificationsDisabled = false;
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !NotificationManagerCompat.from(ApplicationLoader.applicationContext).areNotificationsEnabled()) {
+                                    notificationsDisabled = true;
+                                    if (ApplicationLoader.mainInterfacePaused || !ApplicationLoader.isScreenOn) {
+                                        return;
+                                    }
+                                }
+
+                                TelephonyManager tm = (TelephonyManager) ApplicationLoader.applicationContext.getSystemService(Context.TELEPHONY_SERVICE);
+                                if (VoIPService.getSharedInstance() != null || tm.getCallState() != TelephonyManager.CALL_STATE_IDLE) {
+                                    return;
+                                }
+
+                                Intent intent = new Intent(ApplicationLoader.applicationContext, VoIPService.class);
+                                intent.putExtra("is_outgoing", false);
+                                intent.putExtra("chat_id", update.chat_id);
+                                intent.putExtra("account", currentAccount);
+                                intent.putExtra("group_call_ringing", true);
+                                intent.putExtra("notifications_disabled", notificationsDisabled);
+                                if (!notificationsDisabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    ApplicationLoader.applicationContext.startForegroundService(intent);
+                                } else {
+                                    ApplicationLoader.applicationContext.startService(intent);
+                                }
+
+                                if (ApplicationLoader.mainInterfacePaused || !ApplicationLoader.isScreenOn) {
+                                    ignoreSetOnline = true;
+                                }
+                            } else {
+                                if (VoIPService.getSharedInstance() != null && VoIPService.getSharedInstance().isGroupCallRinging())
+                                    VoIPService.getSharedInstance().endGroupCallRinging();
                             }
                         }
                         if (VoIPService.getSharedInstance() != null) {

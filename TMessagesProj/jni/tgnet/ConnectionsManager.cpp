@@ -3290,7 +3290,6 @@ void ConnectionsManager::init(uint32_t version, int32_t layer, int32_t apiId, st
     }
 
     if (!logPath.empty()) {
-        LOGS_ENABLED = true;
         FileLog::getInstance().init(logPath);
     }
 

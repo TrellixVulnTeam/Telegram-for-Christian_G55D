@@ -5,4 +5,4 @@ obj/
 *.iml
 local.properties
 TMessagesProj/google-services.json
-
+TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
