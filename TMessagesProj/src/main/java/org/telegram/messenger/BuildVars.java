@@ -15,8 +15,8 @@ import android.os.Build;
 import androidx.multidex.BuildConfig;
 
 public class BuildVars {
-
-    public static boolean DEBUG_VERSION = false;
+    // Native code DEBUG_VERSION is in jni/tgnet/Defines.h
+    public static boolean DEBUG_VERSION = BuildConfig.DEBUG;
     public static boolean DEBUG_PRIVATE_VERSION = false;
     public static boolean LOGS_ENABLED = false;
     public static boolean USE_CLOUD_STRINGS = true;
@@ -28,7 +28,7 @@ public class BuildVars {
     public static String APP_HASH = "014b35b6184100b085b0d0572f9b5103";
 
     public static String SMS_HASH = isStandaloneApp() ? "w0lkcmTZkKh" : (DEBUG_VERSION ? "O2P2z+/jBpJ" : "oLeq9AcOZkT");
-    public static String PLAYSTORE_APP_URL = "https://play.google.com/store/apps/details?id=org.telegram.christian";
+    public static String PLAYSTORE_APP_URL = "https://play.google.com/store/apps/details?id=" + ApplicationLoader.applicationContext.getPackageName();
 
     static {
         if (ApplicationLoader.applicationContext != null) {
