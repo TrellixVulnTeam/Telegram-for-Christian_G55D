@@ -245,7 +245,8 @@ public class LanguageSelectActivity extends BaseFragment implements Notification
                 unofficialLanguages.add(info);
             }
         }
-        Collections.sort(sortedLanguages, comparator);
+        // No need to sort language, we need special
+//        Collections.sort(sortedLanguages, comparator);
         Collections.sort(unofficialLanguages, comparator);
     }
 

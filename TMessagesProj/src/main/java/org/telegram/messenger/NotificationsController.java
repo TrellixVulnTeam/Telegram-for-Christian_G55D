@@ -4485,7 +4485,7 @@ public class NotificationsController extends BaseController {
      * @param messageObject
      */
     private void dealGroupCallRinging(MessageObject messageObject) {
-        // Start voice call or invited to a group call
+        // invited to a group call
         try {
             if (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionInviteToGroupCall) {
                 long chat_id = messageObject.messageOwner.peer_id.chat_id != 0 ? messageObject.messageOwner.peer_id.chat_id : messageObject.messageOwner.peer_id.channel_id;
@@ -4496,7 +4496,7 @@ public class NotificationsController extends BaseController {
                     userId = messageObject.messageOwner.action.users.get(0);
                 }
 
-                if (userId == 0 || chat_id == 0 || getUserConfig().getClientUserId() != userId) {
+                if (userId == 0 || chat_id == 0) {
                     return;
                 }
 

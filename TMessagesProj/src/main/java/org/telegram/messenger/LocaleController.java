@@ -215,6 +215,7 @@ public class LocaleController {
     private ArrayList<LocaleInfo> otherLanguages = new ArrayList<>();
 
     private static volatile LocaleController Instance = null;
+
     public static LocaleController getInstance() {
         LocaleController localInstance = Instance;
         if (localInstance == null) {
@@ -264,6 +265,56 @@ public class LocaleController {
         languagesDict.put(localeInfo.shortName, localeInfo);
 
         localeInfo = new LocaleInfo();
+        localeInfo.name = "Español";
+        localeInfo.nameEnglish = "Spanish";
+        localeInfo.shortName = localeInfo.pluralLangCode = "es";
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);
+
+        localeInfo = new LocaleInfo();
+        localeInfo.name = "Bahasa Indonesia";
+        localeInfo.nameEnglish = "Indonesia";
+        localeInfo.shortName = localeInfo.pluralLangCode = "id";
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);
+
+        localeInfo = new LocaleInfo();
+        localeInfo.name = "हिन्दी";
+        localeInfo.nameEnglish = "Hindi";
+        localeInfo.shortName = localeInfo.pluralLangCode = "hi";
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);
+
+        localeInfo = new LocaleInfo();
+        localeInfo.name = "தமிழ்";
+        localeInfo.nameEnglish = "Tamil";
+        localeInfo.shortName = localeInfo.pluralLangCode = "ta";
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);
+
+      /*  localeInfo = new LocaleInfo();
+        localeInfo.name = "ไทย";
+        localeInfo.nameEnglish = "Thai";
+        localeInfo.shortName = localeInfo.pluralLangCode = "th";
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);*/
+
+        localeInfo = new LocaleInfo();
+        localeInfo.name = "Português (Brasil)";
+        localeInfo.nameEnglish = "Portuguese (Brazil)";
+        localeInfo.shortName = "pt_br";
+        localeInfo.pluralLangCode = "pt";
+        localeInfo.pathToFile = null;
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);
+
+        localeInfo = new LocaleInfo();
         localeInfo.name = "Italiano";
         localeInfo.nameEnglish = "Italian";
         localeInfo.shortName = localeInfo.pluralLangCode = "it";
@@ -273,9 +324,20 @@ public class LocaleController {
         languagesDict.put(localeInfo.shortName, localeInfo);
 
         localeInfo = new LocaleInfo();
-        localeInfo.name = "Español";
-        localeInfo.nameEnglish = "Spanish";
-        localeInfo.shortName = localeInfo.pluralLangCode = "es";
+        localeInfo.name = "Русский";
+        localeInfo.nameEnglish = "Russian";
+        localeInfo.shortName = localeInfo.pluralLangCode = "ru";
+        localeInfo.pathToFile = null;
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);
+
+        localeInfo = new LocaleInfo();
+        localeInfo.name = "简体中文";
+        localeInfo.nameEnglish = "Simplified Chinese";
+        localeInfo.pluralLangCode = "zh";
+        localeInfo.shortName = "zh_cn";
+        localeInfo.pathToFile = null;
         localeInfo.builtIn = true;
         languages.add(localeInfo);
         languagesDict.put(localeInfo.shortName, localeInfo);
@@ -305,15 +367,6 @@ public class LocaleController {
         localeInfo.pathToFile = null;
         localeInfo.builtIn = true;
         localeInfo.isRtl = true;
-        languages.add(localeInfo);
-        languagesDict.put(localeInfo.shortName, localeInfo);
-
-        localeInfo = new LocaleInfo();
-        localeInfo.name = "Português (Brasil)";
-        localeInfo.nameEnglish = "Portuguese (Brazil)";
-        localeInfo.shortName = localeInfo.pluralLangCode = "pt_br";
-        localeInfo.pathToFile = null;
-        localeInfo.builtIn = true;
         languages.add(localeInfo);
         languagesDict.put(localeInfo.shortName, localeInfo);
 
@@ -1891,7 +1944,7 @@ public class LocaleController {
                     return getString("WithinAWeek", R.string.WithinAWeek);
                 } else if (user.status.expires == -102) {
                     return getString("WithinAMonth", R.string.WithinAMonth);
-                }  else {
+                } else {
                     return formatDateOnline(user.status.expires);
                 }
             }
