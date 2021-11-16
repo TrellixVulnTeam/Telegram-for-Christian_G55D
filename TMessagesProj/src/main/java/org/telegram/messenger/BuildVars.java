@@ -12,8 +12,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
 
-import androidx.multidex.BuildConfig;
-
 public class BuildVars {
     // Native code DEBUG_VERSION is in jni/tgnet/Defines.h
     public static boolean DEBUG_VERSION = BuildConfig.DEBUG;

@@ -801,7 +801,7 @@ public class LoginActivity extends BaseFragment {
             views[currentViewNum].onNextPressed();
         }
     }
-    
+
     private void showEditDoneProgress(final boolean show, boolean animated) {
         if (doneItemAnimation != null) {
             doneItemAnimation.cancel();
@@ -1595,10 +1595,14 @@ public class LoginActivity extends BaseFragment {
             boolean allowCall = true;
             boolean allowCancelCall = true;
             boolean allowReadCallLog = true;
+            boolean allowReadPhoneNumbers = true;
             if (Build.VERSION.SDK_INT >= 23 && simcardAvailable) {
                 allowCall = getParentActivity().checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED;
                 allowCancelCall = getParentActivity().checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED;
                 allowReadCallLog = false/*Build.VERSION.SDK_INT < 28 || getParentActivity().checkSelfPermission(Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED*/;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    allowReadPhoneNumbers = getParentActivity().checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED;
+                }
                 if (checkPermissions) {
                     permissionsItems.clear();
                     if (!allowCall) {
@@ -1607,13 +1611,18 @@ public class LoginActivity extends BaseFragment {
                     if (!allowCancelCall) {
                         permissionsItems.add(Manifest.permission.CALL_PHONE);
                     }
-                    /*if (!allowReadCallLog) {
+                    if (!allowReadCallLog) {
                         permissionsItems.add(Manifest.permission.READ_CALL_LOG);
-                    }*/
+                    }
+                    if (!allowReadPhoneNumbers) {
+                        permissionsItems.add(Manifest.permission.READ_PHONE_NUMBERS);
+                    }
                     boolean ok = true;
                     if (!permissionsItems.isEmpty()) {
                         SharedPreferences preferences = MessagesController.getGlobalMainSettings();
-                        if (preferences.getBoolean("firstlogin", true) || getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE)/* || getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_CALL_LOG)*/) {
+                        if (preferences.getBoolean("firstlogin", true)
+                                || getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE)
+                                /*|| getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_CALL_LOG)*/) {
                             preferences.edit().putBoolean("firstlogin", false).commit();
                             AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
                             builder.setTitle(LocaleController.getString("AppName", R.string.AppName));
