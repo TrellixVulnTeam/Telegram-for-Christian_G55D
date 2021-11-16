@@ -296,6 +296,14 @@ public class LocaleController {
         languages.add(localeInfo);
         languagesDict.put(localeInfo.shortName, localeInfo);
 
+        localeInfo = new LocaleInfo();
+        localeInfo.name = "Tiếng Việt";
+        localeInfo.nameEnglish = "Vietnamese";
+        localeInfo.shortName = localeInfo.pluralLangCode = "vi";
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);
+
       /*  localeInfo = new LocaleInfo();
         localeInfo.name = "ไทย";
         localeInfo.nameEnglish = "Thai";
