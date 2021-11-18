@@ -1,4 +1,4 @@
-# Telegram-for-Christian
+# Gospel-Messenger
 This is a unofficial Telegram client which adds some extra features to official Telegram:
 - Rings when a group call is started by the group manager so users will not miss group calls.
 - Support 10 accounts at most.
