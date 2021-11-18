@@ -67,6 +67,7 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.blankj.utilcode.util.ActivityUtils;
 import com.google.android.gms.common.api.Status;
 import com.google.firebase.appindexing.Action;
 import com.google.firebase.appindexing.FirebaseUserActions;
@@ -2114,7 +2115,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
                 } else if (intent.getAction().startsWith("com.tmessages.openchat")) {
 
                     long chatId = intent.getLongExtra("chatId", intent.getIntExtra("chatId", 0));
-                    long userId = intent.getLongExtra("userId",  intent.getIntExtra("userId", 0));
+                    long userId = intent.getLongExtra("userId", intent.getIntExtra("userId", 0));
                     int encId = intent.getIntExtra("encId", 0);
                     int widgetId = intent.getIntExtra("appWidgetId", 0);
                     if (widgetId != 0) {
@@ -2460,10 +2461,19 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
                 rightActionBarLayout.showLastFragment();
             }
         }
+
         if (isVoipIntent) {
             VoIPFragment.show(this, intentAccount[0]);
-        } else if (action != null && action.equals("voip_group_ring") && VoIPService.getSharedInstance() != null)
-            VoIPService.getSharedInstance().startInCallActivity();
+        } else if (action != null && action.equals("voip_group_ring")) {
+            Bundle args = new Bundle();
+            args.putInt("dialog_folder_id", 0);
+            args.putInt("dialog_filter_id", 0);
+            args.putLong("chat_id", intent.getLongExtra("chat_id", 0));
+            args.putBoolean("auto_call", true);
+
+            ChatActivity chatActivity = new ChatActivity(args);
+            getActionBarLayout().presentFragment(chatActivity);
+        }
 
         if (!showGroupVoip && (intent == null || !Intent.ACTION_MAIN.equals(intent.getAction())) && GroupCallActivity.groupCallInstance != null) {
             GroupCallActivity.groupCallInstance.dismiss();
@@ -2488,7 +2498,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
             } catch (Throwable ignore) {
 
             }
-            if (videoTimestamp == - 1) {
+            if (videoTimestamp == -1) {
                 DateFormat dateFormat = new SimpleDateFormat("mm:ss");
                 Date reference = null;
                 try {
@@ -2598,7 +2608,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
     }
 
     private void runImportRequest(final Uri importUri,
-                                ArrayList<Uri> documents) {
+                                  ArrayList<Uri> documents) {
         final int intentAccount = UserConfig.selectedAccount;
         final AlertDialog progressDialog = new AlertDialog(this, 3);
         final int[] requestId = new int[]{0};
@@ -3758,7 +3768,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
     public void showBulletin(Function<BulletinFactory, Bulletin> createBulletin) {
         BaseFragment topFragment = null;
         if (!layerFragmentsStack.isEmpty()) {
-             topFragment = layerFragmentsStack.get(layerFragmentsStack.size() - 1);
+            topFragment = layerFragmentsStack.get(layerFragmentsStack.size() - 1);
         } else if (!rightFragmentsStack.isEmpty()) {
             topFragment = rightFragmentsStack.get(rightFragmentsStack.size() - 1);
         } else if (!mainFragmentsStack.isEmpty()) {

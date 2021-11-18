@@ -1627,13 +1627,13 @@ public class LoginActivity extends BaseFragment {
                             AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
                             builder.setTitle(LocaleController.getString("AppName", R.string.AppName));
                             builder.setPositiveButton(LocaleController.getString("OK", R.string.OK), null);
-                            if (!allowCall && (!allowCancelCall || !allowReadCallLog)) {
+                            /*if (!allowCall && (!allowCancelCall || !allowReadCallLog)) {
                                 builder.setMessage(LocaleController.getString("AllowReadCallAndLog", R.string.AllowReadCallAndLog));
                             } else if (!allowCancelCall || !allowReadCallLog) {
                                 builder.setMessage(LocaleController.getString("AllowReadCallLog", R.string.AllowReadCallLog));
-                            } else {
+                            } else {*/
                                 builder.setMessage(LocaleController.getString("AllowReadCall", R.string.AllowReadCall));
-                            }
+//                            }
                             permissionsDialog = showDialog(builder.create());
                         } else {
                             try {

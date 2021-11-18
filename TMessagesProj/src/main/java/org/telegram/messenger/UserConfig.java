@@ -22,7 +22,7 @@ import java.util.Arrays;
 public class UserConfig extends BaseController {
 
     public static int selectedAccount;
-    public final static int MAX_ACCOUNT_COUNT = 3;
+    public final static int MAX_ACCOUNT_COUNT = 10;
 
     private final Object sync = new Object();
     private boolean configLoaded;
@@ -200,6 +200,12 @@ public class UserConfig extends BaseController {
     public long getClientUserId() {
         synchronized (sync) {
             return currentUser != null ? currentUser.id : 0;
+        }
+    }
+
+    public String getClientUserName() {
+        synchronized (sync) {
+            return currentUser != null ? currentUser.username : "";
         }
     }
 

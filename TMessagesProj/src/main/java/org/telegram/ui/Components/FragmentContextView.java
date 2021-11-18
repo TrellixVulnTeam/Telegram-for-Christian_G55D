@@ -2099,7 +2099,7 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
             if (!service.isSwitchingStream() && (currentCallState == VoIPService.STATE_WAIT_INIT || currentCallState == VoIPService.STATE_WAIT_INIT_ACK || currentCallState == VoIPService.STATE_CREATING || currentCallState == VoIPService.STATE_RECONNECTING)) {
                 titleTextView.setText(LocaleController.getString("VoipGroupConnecting", R.string. VoipGroupConnecting), false);
             } else if (service.getChat() != null) {
-                if (!TextUtils.isEmpty(service.groupCall.call.title)) {
+                if (service.groupCall != null && !TextUtils.isEmpty(service.groupCall.call.title)) {
                     titleTextView.setText(service.groupCall.call.title, false);
                 } else {
                     if (fragment instanceof ChatActivity && ((ChatActivity) fragment).getCurrentChat() != null && ((ChatActivity) fragment).getCurrentChat().id == service.getChat().id) {

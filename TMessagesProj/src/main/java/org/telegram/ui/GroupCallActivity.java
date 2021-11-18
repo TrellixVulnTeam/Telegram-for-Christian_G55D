@@ -357,7 +357,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
 
     private int scheduleStartAt;
     private boolean contentFullyOverlayed;
-   // private float progressToFullscreenMode;
+    // private float progressToFullscreenMode;
     ValueAnimator fullscreenModeAnimator;
 
     RecyclerListView fullscreenUsersListView;
@@ -2127,11 +2127,11 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                     BottomSheet.Builder builder = new BottomSheet.Builder(context)
                             .setTitle(LocaleController.getString("VoipSelectAudioOutput", R.string.VoipSelectAudioOutput), true)
                             .setItems(itemsArray, iconsArray, (dialog, which) -> {
-                                        if (VoIPService.getSharedInstance() == null) {
-                                            return;
-                                        }
-                                        service.setAudioOutput(options.get(which));
-                                    });
+                                if (VoIPService.getSharedInstance() == null) {
+                                    return;
+                                }
+                                service.setAudioOutput(options.get(which));
+                            });
                     BottomSheet bottomSheet = builder.create();
 
                     bottomSheet.setBackgroundColor(Theme.getColor(Theme.key_voipgroup_listViewBackgroundUnscrolled));
@@ -2477,7 +2477,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                 ignoreLayout = false;
                 super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(totalHeight, MeasureSpec.EXACTLY));
                 int currentSize = getMeasuredHeight() + (getMeasuredWidth() << 16);
-                 if (currentSize != lastSize) {
+                if (currentSize != lastSize) {
                     lastSize = currentSize;
                     dismissAvatarPreview(false);
                 }
@@ -2506,7 +2506,8 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                     buttonsBackgroundGradientView.setTranslationX(dx);
                     buttonsBackgroundGradientView2.setTranslationX(dx);
 
-                    listView.animate().translationX(0).setDuration(TRANSITION_DURATION).setInterpolator(CubicBezierInterpolator.DEFAULT).start();listView.animate().translationX(0).setDuration(TRANSITION_DURATION).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+                    listView.animate().translationX(0).setDuration(TRANSITION_DURATION).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
+                    listView.animate().translationX(0).setDuration(TRANSITION_DURATION).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
                     buttonsBackgroundGradientView.animate().translationX(0).setDuration(TRANSITION_DURATION).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
                     buttonsBackgroundGradientView2.animate().translationX(0).setDuration(TRANSITION_DURATION).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
                     buttonsContainer.animate().translationX(0).setDuration(TRANSITION_DURATION).setInterpolator(CubicBezierInterpolator.DEFAULT).start();
@@ -2769,7 +2770,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                             }
                             canvas.translate(childX, childY);
                             if (!hasScrimAnchorView) {
-                                canvas.saveLayerAlpha(0 ,0, scrimViewLocal.getMeasuredWidth(), scrimViewLocal.getClipHeight(), (int) (255 * progressToAvatarPreview), Canvas.ALL_SAVE_FLAG);
+                                canvas.saveLayerAlpha(0, 0, scrimViewLocal.getMeasuredWidth(), scrimViewLocal.getClipHeight(), (int) (255 * progressToAvatarPreview), Canvas.ALL_SAVE_FLAG);
                             } else {
                                 canvas.save();
                             }
@@ -3073,7 +3074,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
 
                 boolean animateBackground = itemAnimator.outMinTop != Float.MAX_VALUE;
                 visiblePeerTmp.clear();
-                for (int i = 0; i < visiblePeerIds.size(); i++){
+                for (int i = 0; i < visiblePeerIds.size(); i++) {
                     visiblePeerTmp.put(visiblePeerIds.keyAt(i), 1);
                 }
                 visiblePeerIds.clear();
@@ -3247,8 +3248,8 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                         } else if (index == cellCount - 1) {
                             outRect.left = AndroidUtilities.dp(2);
                         } else {
-                          //  outRect.right = AndroidUtilities.dp(0.5f);
-                             outRect.left =  AndroidUtilities.dp(1f);
+                            //  outRect.right = AndroidUtilities.dp(0.5f);
+                            outRect.left = AndroidUtilities.dp(1f);
                         }
                     }
                 }
@@ -3319,7 +3320,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
             }
         });
         listView.setOnItemLongClickListener((view, position) -> {
-            if (view instanceof GroupCallGridCell)  {
+            if (view instanceof GroupCallGridCell) {
                 return showMenuForCell(view);
             }
             if (view instanceof GroupCallUserCell) {
@@ -3378,6 +3379,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
         buttonsContainer = new FrameLayout(context) {
 
             AnimatorSet currentButtonsAnimation;
+
             @Override
             protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
                 if (!isLandscapeMode) {
@@ -3771,7 +3773,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                     }
 
                     canvas.save();
-                    canvas.scale(BlobDrawable.GLOBAL_SCALE * muteButton.getScaleX(), BlobDrawable.GLOBAL_SCALE  * muteButton.getScaleY(), cx, cy);
+                    canvas.scale(BlobDrawable.GLOBAL_SCALE * muteButton.getScaleX(), BlobDrawable.GLOBAL_SCALE * muteButton.getScaleY(), cx, cy);
 
                     canvas.save();
                     float scale = BlobDrawable.SCALE_BIG_MIN + BlobDrawable.SCALE_BIG * amplitude * 0.5f;
@@ -3864,7 +3866,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                         } else {
                             translation = AndroidUtilities.dp(65) * (1.0f - switchToButtonInt2);
                         }
-                       // cy += translation;
+                        // cy += translation;
                         float scale = BlobDrawable.SCALE_BIG_MIN + BlobDrawable.SCALE_BIG * amplitude * 0.5f;
                         canvas.scale(scale * showLightingProgress, scale * showLightingProgress, cx, cy);
                         if (i == 1) {
@@ -3881,7 +3883,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                         if (switchToButtonProgress > 0) {
                             canvas.save();
                             scale = BlobDrawable.SCALE_BIG_MIN + BlobDrawable.SCALE_BIG * amplitude * showWavesProgressInterpolated * scheduleButtonsScale;
-                            canvas.scale(scale,  scale, cx, cy);
+                            canvas.scale(scale, scale, cx, cy);
                             bigWaveDrawable.draw(cx, cy, canvas, paint);
                             canvas.restore();
 
@@ -3913,7 +3915,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                         float startX = getMeasuredWidth() / 2 - AndroidUtilities.dp(21);
                         float startY = AndroidUtilities.dp(24);
                         float w = (startX + (buttonRadius - startX) * switchButtonProgrss) * scheduleButtonsScale;
-                        float h = (startY + (buttonRadius  - startY) * switchButtonProgrss) * scheduleButtonsScale;
+                        float h = (startY + (buttonRadius - startY) * switchButtonProgrss) * scheduleButtonsScale;
 
                         rect.set(cx - w, cy - h, cx + w, cy + h);
                         float rad = AndroidUtilities.dp(4) + (buttonRadius - AndroidUtilities.dp(4)) * switchButtonProgrss;
@@ -3929,7 +3931,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                             paint.setAlpha(255);
                             float x = scheduleButtonTextView.getX() - getX();
                             float y = scheduleButtonTextView.getY() - getY();
-                            rect.set(x, y, x + scheduleButtonTextView.getMeasuredWidth(),  y + scheduleButtonTextView.getMeasuredHeight());
+                            rect.set(x, y, x + scheduleButtonTextView.getMeasuredWidth(), y + scheduleButtonTextView.getMeasuredHeight());
                             canvas.drawRoundRect(rect, AndroidUtilities.dp(4), AndroidUtilities.dp(4), paint);
                         }
 
@@ -4217,7 +4219,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
             buttonsContainer.addView(muteLabel[a], LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM, 0, 0, 0, 26));
         }
 
-       // buttonsContainer.addView(muteLabelContainer, LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT);
+        // buttonsContainer.addView(muteLabelContainer, LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT);
 
         actionBar.setAlpha(0.0f);
         actionBar.getBackButton().setScaleX(0.9f);
@@ -4425,7 +4427,6 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
         }
 
 
-
         leaveBackgroundPaint.setColor(Theme.getColor(Theme.key_voipgroup_leaveButton));
 
         updateTitle(false);
@@ -4493,7 +4494,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
         fullscreenUsersListView.setAdapter(fullscreenAdapter = new GroupCallFullscreenAdapter(groupCall, currentAccount, this));
         fullscreenAdapter.setVisibility(fullscreenUsersListView, false);
         fullscreenUsersListView.setOnItemClickListener((view, position) -> {
-           // pinnedVideoView.delayHideUi();
+            // pinnedVideoView.delayHideUi();
             GroupCallFullscreenAdapter.GroupCallUserCell userCell = (GroupCallFullscreenAdapter.GroupCallUserCell) view;
             if (userCell.getVideoParticipant() == null) {
                 fullscreenFor(new ChatObject.VideoParticipant(userCell.getParticipant(), false, false));
@@ -4689,7 +4690,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                         float fromRadius = scrimFullscreenView.getAvatarImageView().getMeasuredHeight() / 2f * s;
                         int topRad = (int) ((fromRadius * (1f - progressToAvatarPreview) + (AndroidUtilities.dp(13) * progressToAvatarPreview)));
                         int bottomRad = (int) (fromRadius * (1f - progressToAvatarPreview));
-                       // scrimFullscreenView.getAvatarWavesDrawable().draw(canvas, scrimFullscreenView.getAvatarImageView().getMeasuredHeight() / 2, scrimFullscreenView.getAvatarImageView().getMeasuredHeight() / 2, this);
+                        // scrimFullscreenView.getAvatarWavesDrawable().draw(canvas, scrimFullscreenView.getAvatarImageView().getMeasuredHeight() / 2, scrimFullscreenView.getAvatarImageView().getMeasuredHeight() / 2, this);
                         scrimFullscreenView.getAvatarImageView().getImageReceiver().setImageCoords(0, 0, getMeasuredWidth(), getMeasuredHeight());
                         scrimFullscreenView.getAvatarImageView().setRoundRadius(topRad, topRad, bottomRad, bottomRad);
                         scrimFullscreenView.getAvatarImageView().getImageReceiver().draw(canvas);

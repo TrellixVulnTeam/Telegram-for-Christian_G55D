@@ -7860,6 +7860,16 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         });
 
         emojiAnimationsOverlay = new EmojiAnimationsOverlay(ChatActivity.this, contentView, chatListView, currentAccount, dialog_id, threadMessageId);
+        ThreadUtils.runOnUiThreadDelayed(() -> {
+            if (getArguments().getBoolean("auto_call") && getGroupCall() != null) {
+                if (VoIPService.getSharedInstance() != null)  // If VoIPService instance is exists, we can not make group call.
+                    VoIPService.nullInstance();
+                VoIPService.callIShouldHavePutIntoIntent = null;
+                VoIPHelper.startCall(getMessagesController().getChat(getArguments().getLong("chat_id")),
+                        null, null, false, getParentActivity(), this, getAccountInstance());
+                getArguments().remove("auto_call");
+            }
+        }, 500);
         return fragmentView;
     }
 
@@ -14525,7 +14535,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 checkGroupCallJoin(false);
             }
 
-            if (getArguments().getBoolean("auto_call")) {
+            if (getArguments().getBoolean("auto_call") && getGroupCall() != null) {
                 VoIPHelper.startCall(getMessagesController().getChat(getArguments().getLong("chat_id")),
                         null, null, false, getParentActivity(), this, getAccountInstance());
                 getArguments().remove("auto_call");

@@ -80,6 +80,7 @@ public:
 
 private:
     static void *ThreadProc(void *data);
+    static std::vector<ConnectionsManager*> _instances;
 
     void initDatacenters();
     void loadConfig();

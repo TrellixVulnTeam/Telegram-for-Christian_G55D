@@ -81,6 +81,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 
 import com.blankj.utilcode.util.ActivityUtils;
+import com.blankj.utilcode.util.ThreadUtils;
 
 import org.json.JSONObject;
 import org.telegram.messenger.AccountInstance;
@@ -188,7 +189,6 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
     private int currentState = 0;
     private boolean wasConnected;
     private boolean groupCallRinging = false;
-    private boolean fromInvite = false;
 
     private boolean reconnectScreenCapture;
 
@@ -710,7 +710,6 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
         }
 
         groupCallRinging = intent.getBooleanExtra("group_call_ringing", false);
-        fromInvite = intent.getBooleanExtra("from_invite", false);
 
         if ((callIShouldHavePutIntoIntent != null || groupCallRinging) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationsController.checkOtherNotificationsChannel();
@@ -836,6 +835,10 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 
     public static VoIPService getSharedInstance() {
         return sharedInstance;
+    }
+
+    public static void nullInstance() {
+        sharedInstance = null;
     }
 
     public TLRPC.User getUser() {
@@ -3335,7 +3338,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
                     LaunchActivity activity = (LaunchActivity) ActivityUtils.getTopActivity();
                     activity.getActionBarLayout().presentFragment(chatActivity);
                 } else {
-                    PendingIntent.getActivity(VoIPService.this, 12345, new Intent(VoIPService.this, LaunchActivity.class).setAction("voip_group_ring"), 0).send();
+                    PendingIntent.getActivity(VoIPService.this, 12345, new Intent(VoIPService.this, LaunchActivity.class).putExtra("chat_id", chat.id).setAction("voip_group_ring"), 0).send();
                 }
             } else
                 PendingIntent.getActivity(VoIPService.this, 12345, new Intent(VoIPService.this, LaunchActivity.class).setAction("voip"), 0).send();
@@ -4238,10 +4241,6 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
     }
 
     public void endGroupCallRinging() {
-        stopForeground(true);
-
-        stopRinging();
-
         stopSelf();
     }
 

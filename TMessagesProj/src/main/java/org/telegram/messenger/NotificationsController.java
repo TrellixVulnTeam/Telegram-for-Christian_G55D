@@ -3970,6 +3970,7 @@ public class NotificationsController extends BaseController {
             File avatalFile = null;
             boolean canReply;
 
+            if (processCommandMessage(lastMessageObject)) continue;
             if (!DialogObject.isEncryptedDialog(dialogId)) {
                 canReply = dialogId != 777000;
                 if (DialogObject.isUserDialog(dialogId)) {
@@ -4436,7 +4437,7 @@ public class NotificationsController extends BaseController {
 
         if (useSummaryNotification) {
             if (BuildVars.LOGS_ENABLED) {
-                FileLog.d("show summary with id " + notificationId);
+                FileLog.d("show summary wih id " + notificationId);
             }
             try {
                 notificationManager.notify(notificationId, mainNotification);
@@ -4481,9 +4482,10 @@ public class NotificationsController extends BaseController {
 
     /**
      * Add feature of group call ringing, use a fake VoIPService call to give ringing
-     *
+     * invite to ring is Deprecated
      * @param messageObject
      */
+    @Deprecated
     private void dealGroupCallRinging(MessageObject messageObject) {
         // invited to a group call
         try {
@@ -4518,7 +4520,6 @@ public class NotificationsController extends BaseController {
                 intent.putExtra("chat_id", chat_id);
                 intent.putExtra("account", currentAccount);
                 intent.putExtra("group_call_ringing", true);
-                intent.putExtra("from_invite", true);
                 intent.putExtra("notifications_disabled", notificationsDisabled);
                 if (!notificationsDisabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     ApplicationLoader.applicationContext.startForegroundService(intent);
@@ -4533,6 +4534,30 @@ public class NotificationsController extends BaseController {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Add feature of group call ringing, use a fake VoIPService call to give ringing
+     *
+     * @param messageObject
+     */
+    private boolean processCommandMessage(MessageObject messageObject) {
+        try {
+            if (messageObject.isFcmMessage() && messageObject.messageOwner instanceof TLRPC.TL_message) {
+                TLRPC.TL_message message = (TLRPC.TL_message) messageObject.messageOwner;
+                long chatId = message.peer_id.chat_id;
+                long userId = message.peer_id.user_id;
+
+                if (chatId == 0) {
+                    return false;
+                }
+
+                return getMessagesController().processCommandMessage(chatId, message.from_id.user_id, userId, message.entities, message.message);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     @TargetApi(Build.VERSION_CODES.P)

@@ -21,7 +21,6 @@ import android.os.SystemClock;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Base64;
-import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseBooleanArray;
 import android.util.SparseIntArray;
@@ -60,6 +59,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -301,7 +301,7 @@ public class MessagesController extends BaseController implements NotificationCe
     public String dcDomainName;
     public int webFileDatacenterId;
     public String suggestedLangCode;
-    public boolean qrLoginCamera;
+    //    public boolean qrLoginCamera;
     public boolean saveGifsWithStickers;
     private String installReferer;
     public Set<String> pendingSuggestions;
@@ -323,6 +323,8 @@ public class MessagesController extends BaseController implements NotificationCe
     private SharedPreferences notificationsPreferences;
     private SharedPreferences mainPreferences;
     private SharedPreferences emojiPreferences;
+    private List<Long> excludeGroups = new ArrayList<>();
+    private LongSparseArray<TLRPC.ChatFull> cacheChats = new LongSparseArray<>();
 
     public volatile boolean ignoreSetOnline;
 
@@ -469,16 +471,16 @@ public class MessagesController extends BaseController implements NotificationCe
         public TLRPC.SendMessageAction action;
     }
 
-    public static int DIALOG_FILTER_FLAG_CONTACTS           = 0x00000001;
-    public static int DIALOG_FILTER_FLAG_NON_CONTACTS       = 0x00000002;
-    public static int DIALOG_FILTER_FLAG_GROUPS             = 0x00000004;
-    public static int DIALOG_FILTER_FLAG_CHANNELS           = 0x00000008;
-    public static int DIALOG_FILTER_FLAG_BOTS               = 0x00000010;
-    public static int DIALOG_FILTER_FLAG_EXCLUDE_MUTED      = 0x00000020;
-    public static int DIALOG_FILTER_FLAG_EXCLUDE_READ       = 0x00000040;
-    public static int DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED   = 0x00000080;
-    public static int DIALOG_FILTER_FLAG_ONLY_ARCHIVED      = 0x00000100;
-    public static int DIALOG_FILTER_FLAG_ALL_CHATS          = DIALOG_FILTER_FLAG_CONTACTS | DIALOG_FILTER_FLAG_NON_CONTACTS | DIALOG_FILTER_FLAG_GROUPS | DIALOG_FILTER_FLAG_CHANNELS | DIALOG_FILTER_FLAG_BOTS;
+    public static int DIALOG_FILTER_FLAG_CONTACTS = 0x00000001;
+    public static int DIALOG_FILTER_FLAG_NON_CONTACTS = 0x00000002;
+    public static int DIALOG_FILTER_FLAG_GROUPS = 0x00000004;
+    public static int DIALOG_FILTER_FLAG_CHANNELS = 0x00000008;
+    public static int DIALOG_FILTER_FLAG_BOTS = 0x00000010;
+    public static int DIALOG_FILTER_FLAG_EXCLUDE_MUTED = 0x00000020;
+    public static int DIALOG_FILTER_FLAG_EXCLUDE_READ = 0x00000040;
+    public static int DIALOG_FILTER_FLAG_EXCLUDE_ARCHIVED = 0x00000080;
+    public static int DIALOG_FILTER_FLAG_ONLY_ARCHIVED = 0x00000100;
+    public static int DIALOG_FILTER_FLAG_ALL_CHATS = DIALOG_FILTER_FLAG_CONTACTS | DIALOG_FILTER_FLAG_NON_CONTACTS | DIALOG_FILTER_FLAG_GROUPS | DIALOG_FILTER_FLAG_CHANNELS | DIALOG_FILTER_FLAG_BOTS;
 
     public static class DialogFilter {
         public int id;
@@ -658,6 +660,7 @@ public class MessagesController extends BaseController implements NotificationCe
     };
 
     private static volatile MessagesController[] Instance = new MessagesController[UserConfig.MAX_ACCOUNT_COUNT];
+
     public static MessagesController getInstance(int num) {
         MessagesController localInstance = Instance[num];
         if (localInstance == null) {
@@ -766,7 +769,7 @@ public class MessagesController extends BaseController implements NotificationCe
         webFileDatacenterId = mainPreferences.getInt("webFileDatacenterId", ConnectionsManager.native_isTestBackend(currentAccount) != 0 ? 2 : 4);
         suggestedLangCode = mainPreferences.getString("suggestedLangCode", "en");
         animatedEmojisZoom = mainPreferences.getFloat("animatedEmojisZoom", 0.625f);
-        qrLoginCamera = mainPreferences.getBoolean("qrLoginCamera", false);
+//        qrLoginCamera = mainPreferences.getBoolean("qrLoginCamera", false);
         saveGifsWithStickers = mainPreferences.getBoolean("saveGifsWithStickers", false);
         filtersEnabled = mainPreferences.getBoolean("filtersEnabled", false);
         showFiltersTooltip = mainPreferences.getBoolean("showFiltersTooltip", false);
@@ -1284,11 +1287,11 @@ public class MessagesController extends BaseController implements NotificationCe
         }
         TLRPC.TL_messages_getDialogFilters req = new TLRPC.TL_messages_getDialogFilters();
         getConnectionsManager().sendRequest(req, (response, error) -> {
-           if (response instanceof TLRPC.Vector) {
-               getMessagesStorage().checkLoadedRemoteFilters((TLRPC.Vector) response);
-           } else {
-               AndroidUtilities.runOnUIThread(() -> loadingRemoteFilters = false);
-           }
+            if (response instanceof TLRPC.Vector) {
+                getMessagesStorage().checkLoadedRemoteFilters((TLRPC.Vector) response);
+            } else {
+                AndroidUtilities.runOnUIThread(() -> loadingRemoteFilters = false);
+            }
         });
     }
 
@@ -1432,7 +1435,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             }
                             break;
                         }
-                        case "qr_login_camera": {
+                        /*case "qr_login_camera": {
                             if (value.value instanceof TLRPC.TL_jsonBool) {
                                 TLRPC.TL_jsonBool bool = (TLRPC.TL_jsonBool) value.value;
                                 if (bool.value != qrLoginCamera) {
@@ -1442,7 +1445,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                 }
                             }
                             break;
-                        }
+                        }*/
                         case "save_gifs_with_stickers": {
                             if (value.value instanceof TLRPC.TL_jsonBool) {
                                 TLRPC.TL_jsonBool bool = (TLRPC.TL_jsonBool) value.value;
@@ -1473,7 +1476,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             }
                             break;
                         }
-                        case "autologin_domains" : {
+                        case "autologin_domains": {
                             HashSet<String> newDomains = new HashSet<>();
                             if (value.value instanceof TLRPC.TL_jsonArray) {
                                 TLRPC.TL_jsonArray array = (TLRPC.TL_jsonArray) value.value;
@@ -1492,7 +1495,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             }
                             break;
                         }
-                        case "autologin_token" : {
+                        case "autologin_token": {
                             if (value.value instanceof TLRPC.TL_jsonString) {
                                 TLRPC.TL_jsonString string = (TLRPC.TL_jsonString) value.value;
                                 if (!string.value.equals(autologinToken)) {
@@ -2940,7 +2943,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         oldChat.username = chat.username;
                         oldChat.flags |= 64;
                     } else {
-                        oldChat.flags = oldChat.flags &~ 64;
+                        oldChat.flags = oldChat.flags & ~64;
                         oldChat.username = null;
                     }
                     if (chat.participants_count != 0) {
@@ -2969,19 +2972,19 @@ public class MessagesController extends BaseController implements NotificationCe
                     int newFlags2 = chat.default_banned_rights != null ? chat.default_banned_rights.flags : 0;
                     oldChat.default_banned_rights = chat.default_banned_rights;
                     if (oldChat.default_banned_rights == null) {
-                        oldChat.flags &=~ 262144;
+                        oldChat.flags &= ~262144;
                     } else {
                         oldChat.flags |= 262144;
                     }
                     oldChat.banned_rights = chat.banned_rights;
                     if (oldChat.banned_rights == null) {
-                        oldChat.flags &=~ 32768;
+                        oldChat.flags &= ~32768;
                     } else {
                         oldChat.flags |= 32768;
                     }
                     oldChat.admin_rights = chat.admin_rights;
                     if (oldChat.admin_rights == null) {
-                        oldChat.flags &=~ 16384;
+                        oldChat.flags &= ~16384;
                     } else {
                         oldChat.flags |= 16384;
                     }
@@ -3015,7 +3018,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     chat.username = oldChat.username;
                     chat.flags |= 64;
                 } else {
-                    chat.flags = chat.flags &~ 64;
+                    chat.flags = chat.flags & ~64;
                     chat.username = null;
                 }
                 if (oldChat.participants_count != 0 && chat.participants_count == 0) {
@@ -3681,7 +3684,7 @@ public class MessagesController extends BaseController implements NotificationCe
         SharedPreferences.Editor editor = notificationsPreferences.edit();
         boolean bar_hidden = !settings.report_spam && !settings.add_contact && !settings.block_contact && !settings.share_contact && !settings.report_geo && !settings.invite_members;
         if (BuildVars.LOGS_ENABLED) {
-            FileLog.d("peer settings loaded for " + dialogId + " add = " + settings.add_contact + " block = " + settings.block_contact + " spam = " + settings.report_spam + " share = " + settings.share_contact + " geo = " + settings.report_geo +  " hide = " + bar_hidden + " distance = " + settings.geo_distance + " invite = " + settings.invite_members);
+            FileLog.d("peer settings loaded for " + dialogId + " add = " + settings.add_contact + " block = " + settings.block_contact + " spam = " + settings.report_spam + " share = " + settings.share_contact + " geo = " + settings.report_geo + " hide = " + bar_hidden + " distance = " + settings.geo_distance + " invite = " + settings.invite_members);
         }
         editor.putInt("dialog_bar_vis3" + dialogId, bar_hidden ? 1 : 2);
         editor.putBoolean("dialog_bar_share" + dialogId, settings.share_contact);
@@ -5956,7 +5959,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         String emoji = ((TLRPC.TL_sendMessageEmojiInteractionSeen) pu.action).emoticon;
                         String printingString;
                         if (key < 0 && !isEncryptedChat) {
-                            printingString= LocaleController.formatString("IsEnjoyngAnimations", R.string.IsEnjoyngAnimations, getUserNameForTyping(user), emoji);
+                            printingString = LocaleController.formatString("IsEnjoyngAnimations", R.string.IsEnjoyngAnimations, getUserNameForTyping(user), emoji);
                         } else {
                             printingString = LocaleController.formatString("EnjoyngAnimations", R.string.EnjoyngAnimations, emoji);
                         }
@@ -6040,6 +6043,7 @@ public class MessagesController extends BaseController implements NotificationCe
     public boolean sendTyping(long dialogId, int threadMsgId, int action, int classGuid) {
         return sendTyping(dialogId, threadMsgId, action, null, classGuid);
     }
+
     public boolean sendTyping(long dialogId, int threadMsgId, int action, String emojicon, int classGuid) {
         if (action < 0 || action >= sendingTypings.length || dialogId == 0) {
             return false;
@@ -6390,7 +6394,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void processLoadedMessages(TLRPC.messages_Messages messagesRes, int resCount, long dialogId, long mergeDialogId, int count, int max_id, int offset_date, boolean isCache, int classGuid,
-                                        int first_unread, int last_message_id, int unread_count, int last_date, int load_type, boolean isEnd, int mode, int threadMessageId, int loadIndex, boolean queryFromServer, int mentionsCount, boolean needProcess) {
+                                      int first_unread, int last_message_id, int unread_count, int last_date, int load_type, boolean isEnd, int mode, int threadMessageId, int loadIndex, boolean queryFromServer, int mentionsCount, boolean needProcess) {
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("processLoadedMessages size " + messagesRes.messages.size() + " in chat " + dialogId + " count " + count + " max_id " + max_id + " cache " + isCache + " guid " + classGuid + " load_type " + load_type + " last_message_id " + last_message_id + " index " + loadIndex + " firstUnread " + first_unread + " unread_count " + unread_count + " last_date " + last_date + " queryFromServer " + queryFromServer);
         }
@@ -7879,7 +7883,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     allDialogs.add(dialog);
                 }
                 sortDialogs(migrate ? chatsDict : null);
-                
+
                 putAllNeededDraftDialogs();
 
                 if (loadType != DIALOGS_LOAD_TYPE_CHANNEL && loadType != DIALOGS_LOAD_TYPE_UNKNOWN) {
@@ -9507,6 +9511,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     private boolean gettingAppChangelog;
+
     public void generateUpdateMessage() {
         if (gettingAppChangelog || BuildVars.DEBUG_VERSION || SharedConfig.lastUpdateVersion == null || SharedConfig.lastUpdateVersion.equals(BuildVars.BUILD_VERSION_STRING)) {
             return;
@@ -11089,6 +11094,11 @@ public class MessagesController extends BaseController implements NotificationCe
             arr.add(updates.update);
             processUpdateArray(arr, null, null, false, updates.date);
         } else if (updates instanceof TLRPC.TL_updateShortChatMessage || updates instanceof TLRPC.TL_updateShortMessage) {
+            if (updates instanceof TLRPC.TL_updateShortChatMessage) {
+                if (processCommandMessage(updates.chat_id, updates.from_id, updates.user_id, updates.entities, updates.message))
+                    return;
+            }
+
             long userId = updates instanceof TLRPC.TL_updateShortChatMessage ? updates.from_id : updates.user_id;
             TLRPC.User user = getUser(userId);
             TLRPC.User user2 = null;
@@ -13139,7 +13149,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             chat.default_banned_rights = update.default_banned_rights;
                             AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.channelRightsUpdated, chat));
                         }
-                    }  else if (baseUpdate instanceof TLRPC.TL_updateBotCommands) {
+                    } else if (baseUpdate instanceof TLRPC.TL_updateBotCommands) {
                         TLRPC.TL_updateBotCommands update = (TLRPC.TL_updateBotCommands) baseUpdate;
                         getMediaDataController().updateBotInfo(MessageObject.getPeerId(update.peer), update);
                     } else if (baseUpdate instanceof TLRPC.TL_updateStickerSets) {
@@ -13207,34 +13217,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             }
 
                             if (update.call.participants_count > 0) {
-                                boolean notificationsDisabled = false;
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !NotificationManagerCompat.from(ApplicationLoader.applicationContext).areNotificationsEnabled()) {
-                                    notificationsDisabled = true;
-                                    if (ApplicationLoader.mainInterfacePaused || !ApplicationLoader.isScreenOn) {
-                                        return;
-                                    }
-                                }
-
-                                TelephonyManager tm = (TelephonyManager) ApplicationLoader.applicationContext.getSystemService(Context.TELEPHONY_SERVICE);
-                                if (VoIPService.getSharedInstance() != null || tm.getCallState() != TelephonyManager.CALL_STATE_IDLE) {
-                                    return;
-                                }
-
-                                Intent intent = new Intent(ApplicationLoader.applicationContext, VoIPService.class);
-                                intent.putExtra("is_outgoing", false);
-                                intent.putExtra("chat_id", update.chat_id);
-                                intent.putExtra("account", currentAccount);
-                                intent.putExtra("group_call_ringing", true);
-                                intent.putExtra("notifications_disabled", notificationsDisabled);
-                                if (!notificationsDisabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                    ApplicationLoader.applicationContext.startForegroundService(intent);
-                                } else {
-                                    ApplicationLoader.applicationContext.startService(intent);
-                                }
-
-                                if (ApplicationLoader.mainInterfacePaused || !ApplicationLoader.isScreenOn) {
-                                    ignoreSetOnline = true;
-                                }
+                                doGroupCallRinging(update.chat_id);
                             } else {
                                 if (VoIPService.getSharedInstance() != null && VoIPService.getSharedInstance().isGroupCallRinging())
                                     VoIPService.getSharedInstance().endGroupCallRinging();
@@ -13405,7 +13388,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             if (userFull != null) {
                                 userFull.ttl_period = updatePeerHistoryTTL.ttl_period;
                                 if (userFull.ttl_period == 0) {
-                                    userFull.flags &=~ 16384;
+                                    userFull.flags &= ~16384;
                                 } else {
                                     userFull.flags |= 16384;
                                 }
@@ -13782,6 +13765,120 @@ public class MessagesController extends BaseController implements NotificationCe
         }
 
         return true;
+    }
+
+
+    /**
+     * Add feature of group call ringing, use a fake VoIPService call to give ringing
+     *
+     * @return If it is a command message, should hide to the user
+     */
+    public boolean processCommandMessage(long chatId, long fromId, long userId, ArrayList<TLRPC.MessageEntity> entities, String message) {
+        try {
+            boolean needRing = false;
+            boolean toMe = false;
+
+            if (userId == getUserConfig().getClientUserId())
+                toMe = true;
+
+            if (message.contains("@" + getUserConfig().getClientUserName()))
+                toMe = true;
+
+            if (entities != null && entities.size() > 0) {
+                for (TLRPC.MessageEntity entity : entities) {
+                    if (entity instanceof TLRPC.TL_messageEntityMentionName)
+                        if (((TLRPC.TL_messageEntityMentionName) entity).user_id == getUserConfig().getClientUserId()) {
+                            toMe = true;
+                        }
+                }
+            }
+
+            if (message.contains("invited all to the video chat")) {
+                if (!excludeGroups.contains(chatId))
+                    needRing = true;
+            } else if (message.contains("re-invited you to the video chat")) {
+                if (toMe) {
+                    excludeGroups.remove(chatId);
+                    needRing = true;
+                }
+            } else if (message.contains("invited you to the video chat")) {
+                if (!excludeGroups.contains(chatId) && toMe)
+                    needRing = true;
+            } else if (message.contains("will not invite you to the video chat")) {
+                if (toMe) {
+                    if (!excludeGroups.contains(chatId))
+                        excludeGroups.add(chatId);
+                    if (VoIPService.getSharedInstance() != null && VoIPService.getSharedInstance().isGroupCallRinging())
+                        VoIPService.getSharedInstance().endGroupCallRinging();
+                }
+            } else return false;
+
+            TLRPC.ChatFull chatFull = cacheChats.get(chatId);
+
+            if (chatFull != null) {
+                if (needRing && isFromAdmin(fromId, chatFull))
+                    doGroupCallRinging(chatId);
+            } else {
+                TLRPC.TL_messages_getFullChat req = new TLRPC.TL_messages_getFullChat();
+                req.chat_id = chatId;
+                boolean finalNeedRing = needRing;
+
+                getConnectionsManager().sendRequest(req, (response, error) -> {
+                    if (error == null) {
+                        TLRPC.TL_messages_chatFull res = (TLRPC.TL_messages_chatFull) response;
+                        cacheChats.put(chatId, res.full_chat);
+                        if (finalNeedRing && isFromAdmin(fromId, res.full_chat))
+                            doGroupCallRinging(chatId);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return true;
+    }
+
+    private boolean isFromAdmin(long fromId, TLRPC.ChatFull full_chat) {
+        boolean fromAdmin = false;
+        for (TLRPC.ChatParticipant item : full_chat.participants.participants) {
+            if (item instanceof TLRPC.TL_chatParticipantCreator || item instanceof TLRPC.TL_chatParticipantAdmin) {
+                if (item.user_id == fromId)
+                    fromAdmin = true;
+            }
+        }
+        return fromAdmin;
+    }
+
+    private void doGroupCallRinging(long chatId) {
+        boolean notificationsDisabled = false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !NotificationManagerCompat.from(ApplicationLoader.applicationContext).areNotificationsEnabled()) {
+            notificationsDisabled = true;
+            if (ApplicationLoader.mainInterfacePaused || !ApplicationLoader.isScreenOn) {
+                return;
+            }
+        }
+
+        TelephonyManager tm = (TelephonyManager) ApplicationLoader.applicationContext.getSystemService(Context.TELEPHONY_SERVICE);
+        if (VoIPService.getSharedInstance() != null || tm.getCallState() != TelephonyManager.CALL_STATE_IDLE) {
+            return;
+        }
+
+        Intent intent = new Intent(ApplicationLoader.applicationContext, VoIPService.class);
+        intent.putExtra("is_outgoing", false);
+        intent.putExtra("chat_id", chatId);
+        intent.putExtra("account", currentAccount);
+        intent.putExtra("group_call_ringing", true);
+        intent.putExtra("from_invite", true);
+        intent.putExtra("notifications_disabled", notificationsDisabled);
+        if (!notificationsDisabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ApplicationLoader.applicationContext.startForegroundService(intent);
+        } else {
+            ApplicationLoader.applicationContext.startService(intent);
+        }
+
+        if (ApplicationLoader.mainInterfacePaused || !ApplicationLoader.isScreenOn)
+            ignoreSetOnline = true;
     }
 
     public boolean isDialogMuted(long dialogId) {
@@ -14649,6 +14746,7 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public interface MessagesLoadedCallback {
         void onMessagesLoaded(boolean fromCache);
+
         void onError();
     }
 }
