@@ -37,6 +37,8 @@ import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.blankj.utilcode.util.LogUtils;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.DialogObject;
@@ -1193,7 +1195,7 @@ public class PopupNotificationActivity extends Activity implements NotificationC
             }
         }
         KeyguardManager km = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
-        if (km.inKeyguardRestrictedInputMode() || !ApplicationLoader.isScreenOn) {
+        if (km.isKeyguardLocked() || !ApplicationLoader.isScreenOn) {
             getWindow().addFlags(
                     WindowManager.LayoutParams.FLAG_DIM_BEHIND |
                             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |

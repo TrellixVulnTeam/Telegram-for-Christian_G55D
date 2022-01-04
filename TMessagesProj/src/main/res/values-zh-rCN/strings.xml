@@ -1289,7 +1289,7 @@
     <string name="NotificationGroupAddMember">%1$s 邀请了 %3$s 加入群组«%2$s»</string>
     <string name="NotificationGroupInvitedToCall">%1$s 邀请 %3$s 加入 %2$s 的语音通话</string>
     <string name="NotificationGroupInvitedYouToCall">%1$s邀请您加入%2$s的语音聊天</string>
-    <string name="NotificationGroupCreatedCall">%1$s started a video chat in %2$s</string>
+    <string name="NotificationGroupCreatedCall">%1$s在群组%2$s中开始了视频通话</string>
     <string name="NotificationGroupEndedCall">%1$s 已结束 %2$s 语音聊天</string>
     <string name="NotificationGroupAddSelf">%1$s 回到了群组«%2$s»</string>
     <string name="NotificationGroupAddSelfMega">%1$s 加入了群组«%2$s»</string>
@@ -4847,7 +4847,7 @@
     <string name="DeleteAccountIfAwayFor">保留</string>
     <string name="DeleteLocalization">删除本地化文件？</string>
     <string name="DeleteTheseChats">删除对话</string>
-    <string name="DiceInfo">发送 &#127922; Emoji 至任何聊天记录，Telegram将为您随机生成任何号码.</string>
+    <string name="DiceInfo">发送 &#127922; Emoji 至任何聊天记录，Telegram将为您随机生成任何号码。</string>
     <string name="DiscussionChannelGroupSetHelp">频道底部将向所有订阅者显示**%1$s**的链接。</string>
     <string name="DiscussionChannelHelp">选择一个用于讨论的群组，它将显示在您的频道中。</string>
     <string name="EmailPasswordConfirmText">请根据以下步骤以完成两步验证设置：\n\n1. 查看您的电子邮箱（不要忘记垃圾邮件文件夹）\n%1$s\n\n2. 点击验证链接。</string>

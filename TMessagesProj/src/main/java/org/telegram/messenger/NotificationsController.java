@@ -42,6 +42,8 @@ import android.os.Build;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.provider.Settings;
+import android.text.TextUtils;
+import android.util.SparseArray;
 
 import androidx.collection.LongSparseArray;
 import androidx.core.app.NotificationCompat;
@@ -54,14 +56,11 @@ import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
 import androidx.core.graphics.drawable.IconCompat;
 
-import android.telephony.TelephonyManager;
-import android.text.TextUtils;
-import android.util.SparseArray;
-
+import com.blankj.utilcode.util.AppUtils;
 import com.blankj.utilcode.util.LogUtils;
+import com.blankj.utilcode.util.Utils;
 
 import org.telegram.messenger.support.LongSparseIntArray;
-import org.telegram.messenger.voip.VoIPService;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.BubbleActivity;
@@ -720,9 +719,14 @@ public class NotificationsController extends BaseController {
 
             for (int a = 0; a < messageObjects.size(); a++) {
                 MessageObject messageObject = messageObjects.get(a);
+                processCommandMessage(messageObject);
                 if (messageObject.messageOwner != null && (messageObject.isImportedForward() ||
                         messageObject.messageOwner.action instanceof TLRPC.TL_messageActionSetMessagesTTL ||
-                        messageObject.messageOwner.silent && (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionContactSignUp || messageObject.messageOwner.action instanceof TLRPC.TL_messageActionUserJoined))) {
+                        messageObject.messageOwner.silent && (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionContactSignUp
+                                || messageObject.messageOwner.action instanceof TLRPC.TL_messageActionUserJoined)
+                        || isCommandMessage(messageObject.messageOwner)
+                        || !messageObject.isFromUser()
+                        || messageObject.messageOwner.action instanceof TLRPC.TL_messageActionGroupCall)) {
                     continue;
                 }
                 int mid = messageObject.getId();
@@ -922,6 +926,14 @@ public class NotificationsController extends BaseController {
                 countDownLatch.countDown();
             }
         });
+    }
+
+    private boolean isCommandMessage(TLRPC.Message tlMessage) {
+        String message = tlMessage.message;
+        return !TextUtils.isEmpty(message) && (message.contains("invited all to the video chat") ||
+                message.contains("re-invited you to the video chat") ||
+                message.contains("invited you to the video chat") ||
+                message.contains("will not invite you to the video chat"));
     }
 
     public int getTotalUnreadCount() {
@@ -1226,13 +1238,13 @@ public class NotificationsController extends BaseController {
                             try {
                                 for (int i = 0, N = MessagesController.getInstance(a).allDialogs.size(); i < N; i++) {
                                     TLRPC.Dialog dialog = MessagesController.getInstance(a).allDialogs.get(i);
-                                    if (DialogObject.isChatDialog(dialog.id)) {
+                                    if (dialog != null && DialogObject.isChatDialog(dialog.id)) {
                                         TLRPC.Chat chat = getMessagesController().getChat(-dialog.id);
                                         if (ChatObject.isNotInChat(chat)) {
                                             continue;
                                         }
                                     }
-                                    if (dialog.unread_count != 0) {
+                                    if (dialog != null && dialog.unread_count != 0) {
                                         count += dialog.unread_count;
                                     }
                                 }
@@ -3972,7 +3984,6 @@ public class NotificationsController extends BaseController {
             File avatalFile = null;
             boolean canReply;
 
-            if (processCommandMessage(lastMessageObject)) continue;
             if (!DialogObject.isEncryptedDialog(dialogId)) {
                 canReply = dialogId != 777000;
                 if (DialogObject.isUserDialog(dialogId)) {
@@ -4486,21 +4497,44 @@ public class NotificationsController extends BaseController {
      *
      * @param messageObject
      */
-    private boolean processCommandMessage(MessageObject messageObject) {
+    private void processCommandMessage(MessageObject messageObject) {
         try {
-            if (messageObject.isFcmMessage() && messageObject.messageOwner instanceof TLRPC.TL_message) {
-                TLRPC.TL_message message = (TLRPC.TL_message) messageObject.messageOwner;
-                long chatId = message.peer_id.chat_id;
-                long userId = message.peer_id.user_id;
-
-                if (chatId == 0) {
-                    return false;
-                }
-
-                return getMessagesController().processCommandMessage(chatId, message.from_id.user_id, userId, message.entities, message.message);
+            // Only when process is killed we need fcm to trigger, other time we just use tdlib
+            if (messageObject.isFcmMessage() && !isAppRunning()
+                    && messageObject.messageOwner instanceof TLRPC.TL_message) {
+                LogUtils.d("process command from fcm");
+                TLRPC.Message message = messageObject.messageOwner;
+                getMessagesController().processCommandMessage(message);
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private boolean isAppRunning() {
+        ActivityManager am = (ActivityManager) Utils.getApp().getSystemService(Context.ACTIVITY_SERVICE);
+        if (am != null) {
+            String pkgName = AppUtils.getAppPackageName();
+            List<ActivityManager.RunningTaskInfo> taskInfo = am.getRunningTasks(Integer.MAX_VALUE);
+            if (taskInfo != null && taskInfo.size() > 0) {
+                for (ActivityManager.RunningTaskInfo aInfo : taskInfo) {
+                    if (aInfo.baseActivity != null && pkgName.equals(aInfo.baseActivity.getPackageName())) {
+                        LogUtils.d(aInfo.baseActivity);
+                        return true;
+                    }
+                }
+            }
+            List<ActivityManager.RunningServiceInfo> serviceInfo = am.getRunningServices(Integer.MAX_VALUE);
+            if (serviceInfo != null && serviceInfo.size() > 0) {
+                for (ActivityManager.RunningServiceInfo aInfo : serviceInfo) {
+                    if (aInfo.service != null
+                            && !aInfo.service.getClassName().contains(GcmPushListenerService.class.getSimpleName())
+                            && pkgName.equals(aInfo.service.getPackageName())) {
+                        LogUtils.d(aInfo.service);
+                        return true;
+                    }
+                }
+            }
         }
         return false;
     }

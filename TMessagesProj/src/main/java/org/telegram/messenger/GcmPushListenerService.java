@@ -12,22 +12,26 @@ import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Base64;
 
+import androidx.collection.LongSparseArray;
+
+import com.blankj.utilcode.util.LogUtils;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.telegram.messenger.voip.VoIPService;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.NativeByteBuffer;
 import org.telegram.tgnet.TLRPC;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-
-import androidx.collection.LongSparseArray;
+import java.util.stream.Collectors;
 
 public class GcmPushListenerService extends FirebaseMessagingService {
 
@@ -457,7 +461,7 @@ public class GcmPushListenerService extends FirebaseMessagingService {
                                         break;
                                     }
                                     case "MESSAGE_GAME_SCORE":
-                                    case "CHANNEL_MESSAGE_GAME_SCORE":{
+                                    case "CHANNEL_MESSAGE_GAME_SCORE": {
                                         messageText = LocaleController.formatString("NotificationMessageGameScored", R.string.NotificationMessageGameScored, args[0], args[1], args[2]);
                                         break;
                                     }
@@ -1062,7 +1066,13 @@ public class GcmPushListenerService extends FirebaseMessagingService {
                                     ArrayList<MessageObject> arrayList = new ArrayList<>();
                                     arrayList.add(messageObject);
                                     canRelease = false;
-                                    NotificationsController.getInstance(currentAccount).processNewMessages(arrayList, true, true, countDownLatch);
+                                    LogUtils.d("notification from fcm");
+                                    // Group call start can only be detected here
+                                    if (loc_key.equals("CHAT_VOICECHAT_START")) {
+                                        processStartGroupCall((TLRPC.TL_message)messageOwner);
+                                    } else {
+                                        NotificationsController.getInstance(currentAccount).processNewMessages(arrayList, true, true, countDownLatch);
+                                    }
                                 }
                             }
                         }
@@ -1095,6 +1105,50 @@ public class GcmPushListenerService extends FirebaseMessagingService {
         }
         if (BuildVars.DEBUG_VERSION) {
             FileLog.d("finished GCM service, time = " + (SystemClock.elapsedRealtime() - receiveTime));
+        }
+    }
+
+    private MessagesController getMessageController() {
+        return  AccountInstance.getInstance(UserConfig.selectedAccount).getMessagesController();
+    }
+
+    private void processStartGroupCall(TLRPC.TL_message tlMessage) {
+        try {
+            long chatId = tlMessage.peer_id.chat_id;
+            String message = tlMessage.message;
+
+            if (TextUtils.isEmpty(message)) return;
+
+            boolean chatIdInvalid = false;
+            if (chatId == 0) {
+                chatId = tlMessage.peer_id.channel_id;
+                chatIdInvalid = true;
+            }
+
+            if (chatIdInvalid) {
+                TLRPC.ChatFull fullChat = getMessageController().getFullChatLocal(chatId);
+                if(fullChat == null || fullChat.call == null) return;
+                getMessageController().doGroupCallRinging(chatId);
+            } else {
+                TLRPC.ChatFull fullChat = getMessageController().getFullChatLocal(chatId);
+                if (fullChat != null) {
+                    if(fullChat.call == null) return;
+                    getMessageController().doGroupCallRinging(chatId);
+                } else {
+                    TLRPC.TL_messages_getFullChat req = new TLRPC.TL_messages_getFullChat();
+                    req.chat_id = chatId;
+
+                    getMessageController().getConnectionsManager().sendRequest(req, (response, error) -> {
+                        if (error == null) {
+                            TLRPC.TL_messages_chatFull res = (TLRPC.TL_messages_chatFull) response;
+                            if(res.full_chat.call == null) return;
+                            getMessageController().doGroupCallRinging(req.chat_id);
+                        }
+                    });
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

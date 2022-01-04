@@ -57,6 +57,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.SystemClock;
@@ -81,6 +82,9 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 
 import com.blankj.utilcode.util.ActivityUtils;
+import com.blankj.utilcode.util.LogUtils;
+import com.blankj.utilcode.util.NotificationUtils;
+import com.blankj.utilcode.util.ScreenUtils;
 import com.blankj.utilcode.util.ThreadUtils;
 
 import org.json.JSONObject;
@@ -130,6 +134,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -160,7 +165,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
     public static final String ACTION_HEADSET_PLUG = "android.intent.action.HEADSET_PLUG";
 
     private static final int ID_ONGOING_CALL_NOTIFICATION = 201;
-    private static final int ID_INCOMING_CALL_NOTIFICATION = 202;
+    public static final int ID_INCOMING_CALL_NOTIFICATION = 202;
 
     public static final int QUALITY_SMALL = 0;
     public static final int QUALITY_MEDIUM = 1;
@@ -263,6 +268,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
     private boolean isOutgoing;
     public boolean videoCall;
     private Runnable timeoutRunnable;
+    private CountDownTimer timeoutCountDown;
 
     private Boolean mHasEarpiece;
     private boolean wasEstablished;
@@ -306,7 +312,6 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
     private Runnable delayedStartOutgoingCall;
 
     private boolean startedRinging;
-
     private int classGuid;
 
     private HashMap<String, Integer> currentStreamRequestTimestamp = new HashMap<>();
@@ -1036,7 +1041,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
         }
 
         if (Build.VERSION.SDK_INT >= 19 && XiaomiUtilities.isMIUI() && !XiaomiUtilities.isCustomPermissionGranted(XiaomiUtilities.OP_SHOW_WHEN_LOCKED)) {
-            if (((KeyguardManager) getSystemService(KEYGUARD_SERVICE)).inKeyguardRestrictedInputMode()) {
+            if (((KeyguardManager) getSystemService(KEYGUARD_SERVICE)).isKeyguardLocked()) {
                 if (BuildVars.LOGS_ENABLED) {
                     FileLog.e("MIUI: no permission to show when locked but the screen is locked. ¯\\_(ツ)_/¯");
                 }
@@ -1047,16 +1052,56 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 
         if (groupCallRinging) {
             if (startRinging) {
-                startRinging();
-                if (timeoutRunnable != null) {
-                    AndroidUtilities.cancelRunOnUIThread(timeoutRunnable);
-                    timeoutRunnable = null;
+                if (((KeyguardManager) getSystemService(KEYGUARD_SERVICE)).isKeyguardLocked()) {
+                    startRingtoneAndVibration();
+                    showNotification();
+                    if (timeoutCountDown != null) {
+                        timeoutCountDown.cancel();
+                        timeoutCountDown = null;
+                    }
+
+                    timeoutCountDown = new CountDownTimer(60000L, 1000L) {
+                        @Override
+                        public void onTick(long l) {
+                            if (!((KeyguardManager) getSystemService(KEYGUARD_SERVICE)).isKeyguardLocked()) {
+                                cancel();
+                                stopRinging();
+                                startedRinging = false;
+                                NotificationUtils.cancel(ID_ONGOING_CALL_NOTIFICATION);
+                                LogUtils.d("unlock screen");
+                                ThreadUtils.runOnUiThread(()->{
+                                    startRinging();
+                                });
+
+                                if (timeoutRunnable != null) {
+                                    AndroidUtilities.cancelRunOnUIThread(timeoutRunnable);
+                                    timeoutRunnable = null;
+                                }
+                                timeoutRunnable = () -> {
+                                    timeoutRunnable = null;
+                                    endGroupCallRinging();
+                                };
+                                AndroidUtilities.runOnUIThread(timeoutRunnable,  l);
+                            }
+                        }
+
+                        @Override
+                        public void onFinish() {
+                        }
+                    };
+                    timeoutCountDown.start();
+                } else {
+                    startRinging();
+                    if (timeoutRunnable != null) {
+                        AndroidUtilities.cancelRunOnUIThread(timeoutRunnable);
+                        timeoutRunnable = null;
+                    }
+                    timeoutRunnable = () -> {
+                        timeoutRunnable = null;
+                        endGroupCallRinging();
+                    };
+                    AndroidUtilities.runOnUIThread(timeoutRunnable, 60000);
                 }
-                timeoutRunnable = () -> {
-                    timeoutRunnable = null;
-                    endGroupCallRinging();
-                };
-                AndroidUtilities.runOnUIThread(timeoutRunnable, MessagesController.getInstance(currentAccount).callRingTimeout);
             }
         } else {
             TLRPC.TL_phone_receivedCall req = new TLRPC.TL_phone_receivedCall();
@@ -2899,11 +2944,13 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
         startForeground(ID_ONGOING_CALL_NOTIFICATION, builder.getNotification());
     }
 
-    private void startRingtoneAndVibration(long chatID) {
+    private void startRingtoneAndVibration(long userId) {
         SharedPreferences prefs = MessagesController.getNotificationsSettings(currentAccount);
         AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
         boolean needRing = am.getRingerMode() != AudioManager.RINGER_MODE_SILENT;
         if (needRing) {
+            if(ringtonePlayer != null)
+                stopRinging();
             ringtonePlayer = new MediaPlayer();
             ringtonePlayer.setOnPreparedListener(mediaPlayer -> {
                 try {
@@ -2923,8 +2970,8 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
             }
             try {
                 String notificationUri;
-                if (prefs.getBoolean("custom_" + chatID, false)) {
-                    notificationUri = prefs.getString("ringtone_path_" + chatID, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE).toString());
+                if (prefs.getBoolean("custom_" + userId, false)) {
+                    notificationUri = prefs.getString("ringtone_path_" + userId, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE).toString());
                 } else {
                     notificationUri = prefs.getString("CallsRingtonePath", RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE).toString());
                 }
@@ -2938,8 +2985,8 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
                 }
             }
             int vibrate;
-            if (prefs.getBoolean("custom_" + chatID, false)) {
-                vibrate = prefs.getInt("calls_vibrate_" + chatID, 0);
+            if (prefs.getBoolean("custom_" + userId, false)) {
+                vibrate = prefs.getInt("calls_vibrate_" + userId, 0);
             } else {
                 vibrate = prefs.getInt("vibrate_calls", 0);
             }
@@ -2961,6 +3008,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("=============== VoIPService STOPPING ===============");
         }
+        LogUtils.d("voip service destory");
         stopForeground(true);
         stopRinging();
         if (currentAccount >= 0) {
@@ -2990,6 +3038,12 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
             AndroidUtilities.cancelRunOnUIThread(timeoutRunnable);
             timeoutRunnable = null;
         }
+
+        if (timeoutCountDown != null) {
+            timeoutCountDown.cancel();
+            timeoutCountDown = null;
+        }
+
         super.onDestroy();
         sharedInstance = null;
         Arrays.fill(mySource, 0);
@@ -3314,7 +3368,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
                 FileLog.d("Showing incoming call notification");
             }
         } else {
-            startRingtoneAndVibration(user.id);
+            startRingtoneAndVibration();
             if (BuildVars.LOGS_ENABLED) {
                 FileLog.d("Starting incall activity for incoming call");
             }
@@ -3332,7 +3386,6 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
                 args.putLong("chat_id", chat.id);
                 args.putBoolean("auto_call", true);
 
-                // By now, we use VoIPService just for ringing, it's time to end it. Because the real group call will launch.
                 if (ActivityUtils.getTopActivity() instanceof LaunchActivity) {
                     ChatActivity chatActivity = new ChatActivity(args);
                     LaunchActivity activity = (LaunchActivity) ActivityUtils.getTopActivity();
@@ -3346,6 +3399,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
             if (BuildVars.LOGS_ENABLED) {
                 FileLog.e("Error starting incall activity", x);
             }
+            stopRinging();
         }
     }
 
@@ -3447,7 +3501,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 
             cpuWakelock = ((PowerManager) getSystemService(POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "telegram-voip");
             cpuWakelock.acquire();
-
+            LogUtils.d("wake up");
             btAdapter = am.isBluetoothScoAvailableOffCall() ? BluetoothAdapter.getDefaultAdapter() : null;
 
             IntentFilter filter = new IntentFilter();
@@ -3879,13 +3933,17 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 
     private void showIncomingNotification(String name, CharSequence subText, TLObject userOrChat, boolean video, int additionalMemberCount) {
         Intent intent = new Intent(this, LaunchActivity.class);
-        intent.setAction("voip");
+        if (groupCallRinging) {
+            intent.setAction("voip_group_ring");
+            intent.putExtra("chat_id", chat.id);
+        } else
+            intent.setAction("voip");
         Notification.Builder builder = new Notification.Builder(this)
                 .setContentTitle(video ? LocaleController.getString("VoipInVideoCallBranding", R.string.VoipInVideoCallBranding) : LocaleController.getString("VoipInCallBranding", R.string.VoipInCallBranding))
                 .setContentText(name)
                 .setSmallIcon(R.drawable.notification)
                 .setSubText(subText)
-                .setContentIntent(PendingIntent.getActivity(this, 0, intent, 0));
+                .setContentIntent(PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT));
         Uri soundProviderUri = Uri.parse("content://" + BuildConfig.APPLICATION_ID + ".call_sound_provider/start_ringing");
         if (Build.VERSION.SDK_INT >= 26) {
             SharedPreferences nprefs = MessagesController.getGlobalNotificationsSettings();
@@ -4003,6 +4061,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
         }
         startForeground(ID_INCOMING_CALL_NOTIFICATION, incomingNotification);
         startRingtoneAndVibration();
+        LogUtils.d("show incoming notification");
     }
 
     private void callFailed(String error) {
@@ -4250,7 +4309,8 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
             endGroupCallRinging();
         } else {
             showNotification();
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT < Build.VERSION_CODES.R && (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED || privateCall.video && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Build.VERSION.SDK_INT < Build.VERSION_CODES.R && (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+                    privateCall != null && privateCall.video && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)) {
                 try {
                     //intent.addFlags(Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
                     PendingIntent.getActivity(VoIPService.this, 0, new Intent(VoIPService.this, VoIPPermissionActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_ONE_SHOT).send();

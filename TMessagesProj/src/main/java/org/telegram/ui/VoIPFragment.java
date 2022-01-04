@@ -257,7 +257,7 @@ public class VoIPFragment implements VoIPService.StateListener, NotificationCent
                 return super.dispatchKeyEvent(event);
             }
         };
-        instance.deviceIsLocked = ((KeyguardManager) activity.getSystemService(Context.KEYGUARD_SERVICE)).inKeyguardRestrictedInputMode();
+        instance.deviceIsLocked = ((KeyguardManager) activity.getSystemService(Context.KEYGUARD_SERVICE)).isKeyguardLocked();
 
         PowerManager pm = (PowerManager) activity.getSystemService(Context.POWER_SERVICE);
         boolean screenOn;
@@ -1706,6 +1706,7 @@ public class VoIPFragment implements VoIPService.StateListener, NotificationCent
         byte[] sha256 = Utilities.computeSHA256(auth_key, 0, auth_key.length);
         String[] emoji = EncryptionKeyEmojifier.emojifyForCall(sha256);
         for (int i = 0; i < 4; i++) {
+            Emoji.preloadEmoji(emoji[i]);
             Emoji.EmojiDrawable drawable = Emoji.getEmojiDrawable(emoji[i]);
             if (drawable != null) {
                 drawable.setBounds(0, 0, AndroidUtilities.dp(22), AndroidUtilities.dp(22));
@@ -2171,7 +2172,7 @@ public class VoIPFragment implements VoIPService.StateListener, NotificationCent
             windowView.finish();
         }
 
-        deviceIsLocked = ((KeyguardManager) activity.getSystemService(Context.KEYGUARD_SERVICE)).inKeyguardRestrictedInputMode();
+        deviceIsLocked = ((KeyguardManager) activity.getSystemService(Context.KEYGUARD_SERVICE)).isKeyguardLocked();
     }
 
     private void showErrorDialog(CharSequence message) {

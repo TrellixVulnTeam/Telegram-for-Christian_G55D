@@ -1316,7 +1316,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
         if (call != null && listView != null) {
             TLRPC.TL_groupCallParticipant participant = call.participants.get(MessageObject.getPeerId(selfPeer));
             if (participant != null) {
-                if (!renderersContainer.inFullscreenMode) {
+                if (renderersContainer != null && !renderersContainer.inFullscreenMode) {
                     ArrayList<TLRPC.TL_groupCallParticipant> array = delayedGroupCallUpdated ? oldParticipants : call.visibleParticipants;
                     int idx = array.indexOf(participant);
                     if (idx >= 0) {
