@@ -2464,7 +2464,7 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
 
         if (isVoipIntent) {
             VoIPFragment.show(this, intentAccount[0]);
-        } else if (action != null && action.equals("voip_group_ring")) {
+        } else if (action != null && action.equals("voip_group_ring")) {   // clicked by user
             Bundle args = new Bundle();
             args.putInt("dialog_folder_id", 0);
             args.putInt("dialog_filter_id", 0);
@@ -2474,6 +2474,9 @@ public class LaunchActivity extends Activity implements ActionBarLayout.ActionBa
 
             ChatActivity chatActivity = new ChatActivity(args);
             getActionBarLayout().presentFragment(chatActivity);
+        } else {
+            if (VoIPService.getSharedInstance() != null && VoIPService.getSharedInstance().isGroupCallRinging())
+                VoIPService.getSharedInstance().endGroupCallRinging();
         }
 
         if (!showGroupVoip && (intent == null || !Intent.ACTION_MAIN.equals(intent.getAction())) && GroupCallActivity.groupCallInstance != null) {

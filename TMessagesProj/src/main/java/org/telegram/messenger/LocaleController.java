@@ -33,10 +33,12 @@ import java.io.FileWriter;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Currency;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
 
 public class LocaleController {
@@ -304,13 +306,13 @@ public class LocaleController {
         languages.add(localeInfo);
         languagesDict.put(localeInfo.shortName, localeInfo);
 
-      /*  localeInfo = new LocaleInfo();
-        localeInfo.name = "ไทย";
-        localeInfo.nameEnglish = "Thai";
-        localeInfo.shortName = localeInfo.pluralLangCode = "th";
+        localeInfo = new LocaleInfo();
+        localeInfo.name = "မြန်မာဘာသာ";
+        localeInfo.nameEnglish = "Burmese";
+        localeInfo.shortName = localeInfo.pluralLangCode = "my";
         localeInfo.builtIn = true;
         languages.add(localeInfo);
-        languagesDict.put(localeInfo.shortName, localeInfo);*/
+        languagesDict.put(localeInfo.shortName, localeInfo);
 
         localeInfo = new LocaleInfo();
         localeInfo.name = "Português (Brasil)";
@@ -472,6 +474,13 @@ public class LocaleController {
             return null;
         }
         return languagesDict.get(key.toLowerCase().replace("-", "_"));
+    }
+    public LocaleInfo getLanguageByPlural(String plural) {
+        Collection<LocaleInfo> values = languagesDict.values();
+        for (LocaleInfo l : values)
+            if (l.pluralLangCode != null && l.pluralLangCode.equals(plural))
+                return l;
+        return null;
     }
 
     private void addRules(String[] languages, PluralRules rules) {

@@ -1069,7 +1069,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
                                 startedRinging = false;
                                 NotificationUtils.cancel(ID_ONGOING_CALL_NOTIFICATION);
                                 LogUtils.d("unlock screen");
-                                ThreadUtils.runOnUiThread(()->{
+                                ThreadUtils.runOnUiThread(() -> {
                                     startRinging();
                                 });
 
@@ -1081,7 +1081,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
                                     timeoutRunnable = null;
                                     endGroupCallRinging();
                                 };
-                                AndroidUtilities.runOnUIThread(timeoutRunnable,  l);
+                                AndroidUtilities.runOnUIThread(timeoutRunnable, l);
                             }
                         }
 
@@ -2949,7 +2949,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
         AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
         boolean needRing = am.getRingerMode() != AudioManager.RINGER_MODE_SILENT;
         if (needRing) {
-            if(ringtonePlayer != null)
+            if (ringtonePlayer != null)
                 stopRinging();
             ringtonePlayer = new MediaPlayer();
             ringtonePlayer.setOnPreparedListener(mediaPlayer -> {
@@ -4018,7 +4018,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
             builder.setColor(0xff2ca5e0);
             builder.setVibrate(new long[0]);
             builder.setCategory(Notification.CATEGORY_CALL);
-            builder.setFullScreenIntent(PendingIntent.getActivity(this, 0, intent, 0), true);
+            builder.setFullScreenIntent(PendingIntent.getActivity(this, 0, new Intent(this, LaunchActivity.class), 0), true);
             if (userOrChat instanceof TLRPC.User) {
                 TLRPC.User user = (TLRPC.User) userOrChat;
                 if (!TextUtils.isEmpty(user.phone)) {
@@ -4300,6 +4300,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
     }
 
     public void endGroupCallRinging() {
+        LogUtils.d("endGroupCallRinging");
         stopSelf();
     }
 

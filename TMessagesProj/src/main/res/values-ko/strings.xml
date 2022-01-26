@@ -867,7 +867,7 @@
     <string name="GroupStickersInfo">이 그룹에서 대화할 때 그룹 참가자 모두가 사용할 수 있는 스티커 묶음을 선택하실 수 있습니다.</string>
     <string name="ChooseStickerSet">스티커 묶음 선택</string>
     <string name="ChooseStickerSetPlaceholder">스티커 묶음</string>
-    <string name="ChooseStickerSetMy">"@stickers 봇으로 회원님만의 스티커 묶음을 만드실 수 있습니다."</string>
+    <string name="ChooseStickerSetMy">@stickers 봇으로 회원님만의 스티커 묶음을 만드실 수 있습니다.</string>
     <string name="ChooseStickerSetNotFound">스티커 묶음을 찾지 못했습니다</string>
     <string name="ChooseStickerSetNotFoundInfo">다시 시도하거나 아래 목록에서 고르세요</string>
     <!--chat view-->
