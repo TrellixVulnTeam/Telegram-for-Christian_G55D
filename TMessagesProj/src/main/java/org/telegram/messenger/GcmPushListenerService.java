@@ -14,27 +14,21 @@ import android.util.Base64;
 
 import androidx.collection.LongSparseArray;
 
-import com.google.android.exoplayer2.util.Log;
-import androidx.collection.LongSparseArray;
-
 import com.blankj.utilcode.util.LogUtils;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.telegram.messenger.voip.VoIPService;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.NativeByteBuffer;
 import org.telegram.tgnet.TLRPC;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.util.stream.Collectors;
 
 public class GcmPushListenerService extends FirebaseMessagingService {
 
@@ -114,6 +108,8 @@ public class GcmPushListenerService extends FirebaseMessagingService {
                     } else {
                         loc_key = "";
                     }
+
+
 
                     JSONObject custom;
                     Object object = json.get("custom");
@@ -1124,7 +1120,7 @@ public class GcmPushListenerService extends FirebaseMessagingService {
         }
     }
 
-    private String getReactedText(String loc_key, String[] args) {
+    private String getReactedText(String loc_key, Object[] args) {
         switch (loc_key) {
             case "REACT_TEXT": {
                 return LocaleController.formatString("PushReactText", R.string.PushReactText, args);
