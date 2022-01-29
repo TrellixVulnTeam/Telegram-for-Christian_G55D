@@ -17,9 +17,11 @@ import android.view.Gravity;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import com.blankj.utilcode.util.SPUtils;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
-import org.telegram.messenger.ImageLocation;
+import org.telegram.messenger.GroupCallUtil;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
@@ -32,6 +34,9 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.LayoutHelper;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class ManageChatUserCell extends FrameLayout {
 
@@ -53,7 +58,7 @@ public class ManageChatUserCell extends FrameLayout {
     private boolean isAdmin;
 
     private boolean needDivider;
-
+    public long chatId;
     private int statusColor;
     private int statusOnlineColor;
 
@@ -64,6 +69,31 @@ public class ManageChatUserCell extends FrameLayout {
     private String dividerColor;
 
     private ManageChatUserCellDelegate delegate;
+
+    public static SPUtils excludeSp = SPUtils.getInstance("excludeUsers");
+    public static SPUtils callingSp = SPUtils.getInstance("callingUsers");
+
+    public void setCustomImageData(long chatId, TLRPC.User user) {
+        Set<String> excludeUsers = excludeSp.getStringSet(chatId + "", new HashSet<>());
+
+        if (excludeUsers.contains(user.id + "")) {
+            customImageView.setAlpha(1.0f);
+        } else {
+            customImageView.setAlpha(0.3f);
+        }
+        customImageView.setOnClickListener(v -> {
+            if (customImageView.getAlpha() == 1.0f) {
+                customImageView.setAlpha(0.3f);
+                excludeUsers.remove(user.id + "");
+                GroupCallUtil.sendCommandMessage(GroupCallUtil.UNEXCLUDE, chatId, user);
+            } else {
+                customImageView.setAlpha(1.0f);
+                excludeUsers.add(user.id + "");
+                GroupCallUtil.sendCommandMessage(GroupCallUtil.EXCLUDE, chatId, user);
+            }
+            excludeSp.put(chatId + "", excludeUsers);
+        });
+    }
 
     public interface ManageChatUserCellDelegate {
         boolean onOptionsButtonCheck(ManageChatUserCell cell, boolean click);
@@ -112,7 +142,7 @@ public class ManageChatUserCell extends FrameLayout {
         customImageView = new ImageView(getContext());
         customImageView.setImageResource(resId);
         customImageView.setScaleType(ImageView.ScaleType.CENTER);
-        customImageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_voipgroup_mutedIconUnscrolled), PorterDuff.Mode.MULTIPLY));
+//        customImageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_voipgroup_mutedIconUnscrolled), PorterDuff.Mode.MULTIPLY));
         addView(customImageView, LayoutHelper.createFrame(52, 64, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.TOP));
     }
 
@@ -161,6 +191,13 @@ public class ManageChatUserCell extends FrameLayout {
             return ((TLRPC.User) currentObject).id;
         }
         return 0;
+    }
+
+    public TLRPC.User getUser() {
+        if (currentObject instanceof TLRPC.User) {
+            return (TLRPC.User) currentObject;
+        }
+        return null;
     }
 
     public void setStatusColors(int color, int onlineColor) {
@@ -225,6 +262,7 @@ public class ManageChatUserCell extends FrameLayout {
             }
 
             avatarDrawable.setInfo(currentUser);
+
             if (currentUser.status != null) {
                 lastStatus = currentUser.status.expires;
             } else {
@@ -238,7 +276,11 @@ public class ManageChatUserCell extends FrameLayout {
                 lastName = newName == null ? UserObject.getUserName(currentUser) : newName;
                 nameTextView.setText(lastName);
             }
-            if (currrntStatus != null) {
+
+            if(isCalling()) {
+                statusTextView.setTextColor(statusOnlineColor);
+                statusTextView.setText(LocaleController.getString("VoipGroupCalling", R.string.VoipGroupCalling));
+            } else if (currrntStatus != null) {
                 statusTextView.setTextColor(statusColor);
                 statusTextView.setText(currrntStatus);
             } else {
@@ -325,6 +367,23 @@ public class ManageChatUserCell extends FrameLayout {
             avatarDrawable.setAvatarType(AvatarDrawable.AVATAR_TYPE_SHARES);
             avatarImageView.setImage(null, "50_50", avatarDrawable);
         }
+    }
+
+    public boolean isCalling() {
+        Set<String> callingUsers = callingSp.getStringSet(chatId + "", new HashSet<>());
+        for (String value : callingUsers) {
+            if (value.contains(getUserId() + "_")) {
+                long startTime = Long.parseLong(value.replace(getUserId() + "_", ""));
+                if (System.currentTimeMillis() - startTime > 90 * 1000) {
+                    callingUsers.remove(value);
+                    callingSp.put(chatId + "", callingUsers);
+                    break;
+                } else {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public void recycle() {

@@ -330,7 +330,6 @@ public class MessagesController extends BaseController implements NotificationCe
     private SharedPreferences notificationsPreferences;
     private SharedPreferences mainPreferences;
     private SharedPreferences emojiPreferences;
-    private List<Long> excludeGroups = new ArrayList<>();
 
     public volatile boolean ignoreSetOnline;
 
@@ -4753,7 +4752,7 @@ public class MessagesController extends BaseController implements NotificationCe
         long fromId = 0;
         if (fromUser != null) {
             fromId = fromUser.id;
-        } else if (fromChat != null){
+        } else if (fromChat != null) {
             fromId = fromChat.id;
         }
         if (offset == 0) {
@@ -9672,11 +9671,11 @@ public class MessagesController extends BaseController implements NotificationCe
         for (int i = 0; i < count; i++) {
             String value = preferences.getString("log_out_token_" + i, "");
             SerializedData serializedData = new SerializedData(Utilities.hexToBytes(value));
-           // try {
-                TLRPC.TL_auth_loggedOut token = TLRPC.TL_auth_loggedOut.TLdeserialize(serializedData, serializedData.readInt32(true), true);
-                if (token != null) {
-                    tokens.add(token);
-                }
+            // try {
+            TLRPC.TL_auth_loggedOut token = TLRPC.TL_auth_loggedOut.TLdeserialize(serializedData, serializedData.readInt32(true), true);
+            if (token != null) {
+                tokens.add(token);
+            }
 //            } catch (Throwable e) {
 //                FileLog.e(e);
 //            }
@@ -9690,17 +9689,17 @@ public class MessagesController extends BaseController implements NotificationCe
         preferences.edit().clear().apply();
         int date = (int) (System.currentTimeMillis() / 1000L);
         for (int i = 0; i < Math.min(20, tokens.size()); i++) {
-                activeTokens.add(tokens.get(i));
+            activeTokens.add(tokens.get(i));
         }
         if (activeTokens.size() > 0) {
-           SharedPreferences.Editor editor = preferences.edit();
-           editor.putInt("count", activeTokens.size());
-           for (int i = 0; i < activeTokens.size(); i++) {
-               SerializedData data = new SerializedData(activeTokens.get(i).getObjectSize());
-               activeTokens.get(i).serializeToStream(data);
-               editor.putString("log_out_token_" + i, Utilities.bytesToHex(data.toByteArray()));
-           }
-           editor.apply();
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putInt("count", activeTokens.size());
+            for (int i = 0; i < activeTokens.size(); i++) {
+                SerializedData data = new SerializedData(activeTokens.get(i).getObjectSize());
+                activeTokens.get(i).serializeToStream(data);
+                editor.putString("log_out_token_" + i, Utilities.bytesToHex(data.toByteArray()));
+            }
+            editor.apply();
         }
     }
 
@@ -11299,7 +11298,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 message.from_id.user_id = updates.from_id;
                 message.entities = updates.entities;
                 message.message = updates.message;
-                processCommandMessage(message);
+                GroupCallUtil.getInstance().processCommandMessage(message);
             }
 
             long userId = updates instanceof TLRPC.TL_updateShortChatMessage ? updates.from_id : updates.user_id;
@@ -11909,7 +11908,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 TLRPC.Message message;
                 if (baseUpdate instanceof TLRPC.TL_updateNewMessage) {
                     message = ((TLRPC.TL_updateNewMessage) baseUpdate).message;
-                    processCommandMessage(message);  // receive message from a group when app is noactive
+                    GroupCallUtil.getInstance().processCommandMessage(message);  // receive message from a group when app is noactive
                 } else if (baseUpdate instanceof TLRPC.TL_updateNewScheduledMessage) {
                     message = ((TLRPC.TL_updateNewScheduledMessage) baseUpdate).message;
                 } else {                             // Receive message from a channel
@@ -11921,7 +11920,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         message.out = true;
                     }
 
-                    processCommandMessage(message);
+                    GroupCallUtil.getInstance().processCommandMessage(message);
                 }
                 if (message instanceof TLRPC.TL_messageEmpty) {
                     continue;
@@ -13973,170 +13972,6 @@ public class MessagesController extends BaseController implements NotificationCe
         return true;
     }
 
-
-    /**
-     * Add feature of group call ringing, use a fake VoIPService call to give ringing
-     */
-    public void processCommandMessage(TLRPC.Message tlMessage) {
-        try {
-            long chatId = tlMessage.peer_id.chat_id;
-            long userId = tlMessage.peer_id.user_id;
-            long fromId = tlMessage.from_id.user_id;
-            String message = tlMessage.message;
-            List<TLRPC.MessageEntity> entities = tlMessage.entities;
-
-            if (TextUtils.isEmpty(message)) return;
-
-            boolean chatIdInvalid = false;
-            if (chatId == 0) {
-                chatId = tlMessage.peer_id.channel_id;
-                chatIdInvalid = true;
-            }
-
-            boolean needRing = false;
-            boolean toMe = false;
-
-            if (userId == getUserConfig().getClientUserId())
-                toMe = true;
-
-            if (message.contains("@" + getUserConfig().getClientUserName()))
-                toMe = true;
-
-            if (entities != null && entities.size() > 0) {
-                for (TLRPC.MessageEntity entity : entities) {
-                    if (entity instanceof TLRPC.TL_messageEntityMentionName)
-                        if (((TLRPC.TL_messageEntityMentionName) entity).user_id == getUserConfig().getClientUserId()) {
-                            toMe = true;
-                        }
-                }
-            }
-
-            if (message.contains("invited all to the video chat")) {
-                if (!excludeGroups.contains(chatId))
-                    needRing = true;
-            } else if (message.contains("re-invited you to the video chat")) {
-                if (toMe) {
-                    excludeGroups.remove(chatId);
-                    needRing = false;
-                }
-            } else if (message.contains("invited you to the video chat")) {
-                if (!excludeGroups.contains(chatId) && toMe)
-                    needRing = true;
-            } else if (message.contains("will not invite you to the video chat")) {
-                if (toMe) {
-                    if (!excludeGroups.contains(chatId))
-                        excludeGroups.add(chatId);
-                    if (VoIPService.getSharedInstance() != null && VoIPService.getSharedInstance().isGroupCallRinging())
-                        VoIPService.getSharedInstance().endGroupCallRinging();
-                }
-            } else return;
-            if (!needRing) return;
-
-            // Only admin can set command, so check the sender
-            List<Long> ids = new ArrayList<>();
-            if (chatIdInvalid) {
-                TLRPC.ChatFull fullChat = getFullChatLocal(chatId);
-                if(fullChat == null || fullChat.call == null) return;
-
-                LongSparseArray<TLRPC.ChannelParticipant> adminArray = channelAdmins.get(chatId);
-                if (adminArray != null) {
-                    for (int i = 0; i < adminArray.size(); i++)
-                        ids.add(adminArray.valueAt(i).peer.user_id);
-                } else {
-                    ids = getMessagesStorage().loadChannelAdminsSync(chatId);
-                }
-
-                if (ids.size() > 0) {
-                    if (ids.contains(fromId)) {
-                        doGroupCallRinging(chatId);
-                    }
-                } else {
-                    TLRPC.TL_channels_getParticipants req = new TLRPC.TL_channels_getParticipants();
-                    req.channel = getInputChannel(chatId);
-                    req.limit = 100;
-                    req.filter = new TLRPC.TL_channelParticipantsAdmins();
-
-                    long finalChatId = chatId;
-                    getConnectionsManager().sendRequest(req, (response, error) -> {
-                        if (error == null) {
-                            if (response instanceof TLRPC.TL_channels_channelParticipants) {
-                                TLRPC.TL_channels_channelParticipants participants = (TLRPC.TL_channels_channelParticipants) response;
-                                List<Long> list = participants.participants.stream().map(it -> it.peer.user_id).collect(Collectors.toList());
-                                if (list.contains(fromId)) {
-                                    doGroupCallRinging(finalChatId);
-                                }
-                            }
-                        }
-                    });
-                }
-            } else {
-                TLRPC.ChatFull fullChat = getFullChatLocal(chatId);
-                if (fullChat != null) {
-                    if(fullChat.call == null) return;
-                    ids = fullChat.participants.participants.stream().filter(item -> item instanceof TLRPC.TL_chatParticipantCreator
-                            || item instanceof TLRPC.TL_chatParticipantAdmin).map(item -> item.user_id).collect(Collectors.toList());
-                    if (ids.contains(fromId)) {
-                        doGroupCallRinging(chatId);
-                    }
-                } else {
-                    TLRPC.TL_messages_getFullChat req = new TLRPC.TL_messages_getFullChat();
-                    req.chat_id = chatId;
-
-                    getConnectionsManager().sendRequest(req, (response, error) -> {
-                        if (error == null) {
-                            TLRPC.TL_messages_chatFull res = (TLRPC.TL_messages_chatFull) response;
-                            if(res.full_chat.call == null) return;
-                            List<Long> list = res.full_chat.participants.participants.stream().filter(item -> item instanceof TLRPC.TL_chatParticipantCreator
-                                    || item instanceof TLRPC.TL_chatParticipantAdmin).map(item -> item.user_id).collect(Collectors.toList());
-                            if (list.contains(fromId))
-                                doGroupCallRinging(req.chat_id);
-                        }
-                    });
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public TLRPC.ChatFull getFullChatLocal(long chatId) {
-        TLRPC.ChatFull fullChat = getChatFull(chatId);
-        if (fullChat == null) {
-            fullChat = getMessagesStorage().loadChatInfo(chatId, false, null, true, false);
-        }
-        return fullChat;
-    }
-
-    public void doGroupCallRinging(long chatId) {
-        boolean notificationsDisabled = false;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !NotificationManagerCompat.from(ApplicationLoader.applicationContext).areNotificationsEnabled()) {
-            notificationsDisabled = true;
-            if (ApplicationLoader.mainInterfacePaused || !ApplicationLoader.isScreenOn) {
-                return;
-            }
-        }
-
-        TelephonyManager tm = (TelephonyManager) ApplicationLoader.applicationContext.getSystemService(Context.TELEPHONY_SERVICE);
-        if (VoIPService.getSharedInstance() != null || tm.getCallState() != TelephonyManager.CALL_STATE_IDLE) {
-            return;
-        }
-
-        Intent intent = new Intent(ApplicationLoader.applicationContext, VoIPService.class);
-        intent.putExtra("is_outgoing", false);
-        intent.putExtra("chat_id", chatId);
-        intent.putExtra("account", currentAccount);
-        intent.putExtra("group_call_ringing", true);
-        intent.putExtra("notifications_disabled", notificationsDisabled);
-        if (!notificationsDisabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ApplicationLoader.applicationContext.startForegroundService(intent);
-        } else {
-            ApplicationLoader.applicationContext.startService(intent);
-        }
-
-        if (ApplicationLoader.mainInterfacePaused || !ApplicationLoader.isScreenOn)
-            ignoreSetOnline = true;
-    }
-
     public boolean isDialogMuted(long dialogId) {
         return isDialogMuted(dialogId, null);
     }
@@ -15051,7 +14886,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void markSponsoredAsRead(long dialog_id, MessageObject object) {
-       // sponsoredMessages.remove(dialog_id);
+        // sponsoredMessages.remove(dialog_id);
     }
 
     public void deleteMessagesRange(long dialogId, long channelId, int minDate, int maxDate, boolean forAll, Runnable callback) {

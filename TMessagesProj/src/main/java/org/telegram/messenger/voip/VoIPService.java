@@ -97,6 +97,7 @@ import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.GroupCallUtil;
 import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
@@ -1068,7 +1069,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
                                 stopRinging();
                                 startedRinging = false;
                                 NotificationUtils.cancel(ID_ONGOING_CALL_NOTIFICATION);
-                                LogUtils.d("unlock screen");
+
                                 ThreadUtils.runOnUiThread(() -> {
                                     startRinging();
                                 });
@@ -4300,8 +4301,8 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
     }
 
     public void endGroupCallRinging() {
-        LogUtils.d("endGroupCallRinging");
         stopSelf();
+        GroupCallUtil.sendCommandMessage(GroupCallUtil.REFUSE_INVITE, chat.id, UserConfig.getInstance(currentAccount).getCurrentUser());
     }
 
     private void acceptIncomingCallFromNotification() {

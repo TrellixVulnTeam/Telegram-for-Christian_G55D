@@ -3684,6 +3684,7 @@
     <string name="VoipChannelTooMuch">Sorry, this live stream is full.</string>
     <string name="VoipChannelInviteText">Hey! Join our live stream: %1$s</string>
     <string name="VoipGroupInviteMember">Invite Members</string>
+    <string name="VoipGroupCallMember">Call Members</string>
     <string name="VoipGroupShareLink">Share Invite Link</string>
     <string name="VoipGroupUserRemove">Remove</string>
     <string name="VoipGroupOpenProfile">Open Profile</string>
@@ -3691,7 +3692,10 @@
     <string name="VoipGroupOpenGroup">Open Group</string>
     <string name="VoipGroupAllowToSpeak">Allow to speak</string>
     <string name="VoipGroupSearchMembers">Search members to invite...</string>
+    <string name="VoipGroupCalling">Calling...</string>
+    <string name="VoipGroupSearchMembersCall">Search members to call...</string>
     <string name="VoipGroupCopyInviteLink">Copy Invite Link</string>
+    <string name="VoipGroupCallAll">Call All</string>
     <string name="VoipGroupCopyInviteLinkCopied">Invite link copied to clipboard.</string>
     <string name="VoipGroupUnmute">Unmute</string>
     <string name="VoipGroupAddMemberTitle">Add Member</string>

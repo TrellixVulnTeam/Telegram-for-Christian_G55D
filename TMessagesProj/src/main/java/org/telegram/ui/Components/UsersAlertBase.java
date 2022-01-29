@@ -261,7 +261,7 @@ public class UsersAlertBase extends BottomSheet {
             searchEditText.setLines(1);
             searchEditText.setSingleLine(true);
             searchEditText.setImeOptions(EditorInfo.IME_ACTION_SEARCH | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
-            searchEditText.setHint(LocaleController.getString("VoipGroupSearchMembers", R.string.VoipGroupSearchMembers));
+            searchEditText.setHint(LocaleController.getString("VoipGroupSearchMembersCall", R.string.VoipGroupSearchMembersCall));
             searchEditText.setCursorColor(Theme.getColor(keySearchText));
             searchEditText.setCursorSize(AndroidUtilities.dp(20));
             searchEditText.setCursorWidth(1.5f);

@@ -83,6 +83,7 @@ import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.GroupCallUtil;
 import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LocaleController;
@@ -160,6 +161,7 @@ import java.util.Locale;
 
 import static android.content.Context.AUDIO_SERVICE;
 
+import com.blankj.utilcode.util.ThreadUtils;
 import com.google.android.exoplayer2.util.Log;
 
 public class GroupCallActivity extends BottomSheet implements NotificationCenter.NotificationCenterDelegate, VoIPService.StateListener {
@@ -1454,6 +1456,9 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                 containerView.requestLayout();
             }
         }
+
+        if (groupVoipInviteAlert != null && groupVoipInviteAlert.isShowing())
+            groupVoipInviteAlert.updateIgnoredUsers(call.participants);
     }
 
     private void updateVideoParticipantList() {
@@ -3295,13 +3300,13 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                 groupVoipInviteAlert.setOnDismissListener(dialog -> groupVoipInviteAlert = null);
                 groupVoipInviteAlert.setDelegate(new GroupVoipInviteAlert.GroupVoipInviteAlertDelegate() {
                     @Override
-                    public void copyInviteLink() {
-                        getLink(true);
+                    public void inviteAll() {
+                        GroupCallUtil.sendCommandMessage(GroupCallUtil.INVITE_ALL, chat.id, null);
                     }
 
                     @Override
-                    public void inviteUser(long id) {
-                        inviteUserToCall(id, true);
+                    public void callUser(TLRPC.User user) {
+                        GroupCallUtil.sendCommandMessage(GroupCallUtil.INVITE_USER, chat.id, user);
                     }
 
                     @Override
@@ -7521,7 +7526,9 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
             }
 
             if ((!ChatObject.isChannel(currentChat) || currentChat.megagroup) && ChatObject.canWriteToChat(currentChat) || ChatObject.isChannel(currentChat) && !currentChat.megagroup && !TextUtils.isEmpty(currentChat.username)) {
-                addMemberRow = rowsCount++;
+                if (ChatObject.canManageCalls(currentChat))
+                    addMemberRow = rowsCount++;
+                else addMemberRow = -1;
             } else {
                 addMemberRow = -1;
             }
@@ -7615,7 +7622,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                     if (ChatObject.isChannel(currentChat) && !currentChat.megagroup && !TextUtils.isEmpty(currentChat.username)) {
                         textCell.setTextAndIcon(LocaleController.getString("VoipGroupShareLink", R.string.VoipGroupShareLink), R.drawable.msg_link, false);
                     } else {
-                        textCell.setTextAndIcon(LocaleController.getString("VoipGroupInviteMember", R.string.VoipGroupInviteMember), R.drawable.actions_addmember2, false);
+                        textCell.setTextAndIcon(LocaleController.getString("VoipGroupCallMember", R.string.VoipGroupCallMember), R.drawable.actions_addmember2, false);
                     }
                     break;
                 case 1: {

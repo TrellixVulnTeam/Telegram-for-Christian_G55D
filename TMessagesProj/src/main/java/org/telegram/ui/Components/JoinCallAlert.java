@@ -26,6 +26,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.GroupCallUtil;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
@@ -47,6 +48,8 @@ import java.util.ArrayList;
 import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.blankj.utilcode.util.ThreadUtils;
 
 public class JoinCallAlert extends BottomSheet {
 
@@ -572,6 +575,9 @@ public class JoinCallAlert extends BottomSheet {
                 }
             } else {
                 selectAfterDismiss = peer;
+                ThreadUtils.runOnUiThreadDelayed(() -> {
+                    GroupCallUtil.sendCommandMessage(GroupCallUtil.INVITE_ALL, -dialogId, null);
+                }, 5000);
             }
             dismiss();
         });

@@ -719,12 +719,12 @@ public class NotificationsController extends BaseController {
 
             for (int a = 0; a < messageObjects.size(); a++) {
                 MessageObject messageObject = messageObjects.get(a);
-                processCommandMessage(messageObject);
+                GroupCallUtil.getInstance().processFcmCommandMessage(messageObject);
                 if (messageObject.messageOwner != null && (messageObject.isImportedForward() ||
                         messageObject.messageOwner.action instanceof TLRPC.TL_messageActionSetMessagesTTL ||
                         messageObject.messageOwner.silent && (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionContactSignUp
                                 || messageObject.messageOwner.action instanceof TLRPC.TL_messageActionUserJoined)
-                        || isCommandMessage(messageObject.messageOwner)
+                        || GroupCallUtil.isCommandMessage(messageObject.messageOwner)
                         || !messageObject.isFromUser()
                         || messageObject.messageOwner.action instanceof TLRPC.TL_messageActionGroupCall)) {
                     continue;
@@ -926,14 +926,6 @@ public class NotificationsController extends BaseController {
                 countDownLatch.countDown();
             }
         });
-    }
-
-    private boolean isCommandMessage(TLRPC.Message tlMessage) {
-        String message = tlMessage.message;
-        return !TextUtils.isEmpty(message) && (message.contains("invited all to the video chat") ||
-                message.contains("re-invited you to the video chat") ||
-                message.contains("invited you to the video chat") ||
-                message.contains("will not invite you to the video chat"));
     }
 
     public int getTotalUnreadCount() {
@@ -4511,53 +4503,6 @@ public class NotificationsController extends BaseController {
                 ShortcutManagerCompat.removeDynamicShortcuts(ApplicationLoader.applicationContext, ids);
             }
         }
-    }
-
-    /**
-     * Add feature of group call ringing, use a fake VoIPService call to give ringing
-     *
-     * @param messageObject
-     */
-    private void processCommandMessage(MessageObject messageObject) {
-        try {
-            // Only when process is killed we need fcm to trigger, other time we just use tdlib
-            if (messageObject.isFcmMessage() && !isAppRunning()
-                    && messageObject.messageOwner instanceof TLRPC.TL_message) {
-                LogUtils.d("process command from fcm");
-                TLRPC.Message message = messageObject.messageOwner;
-                getMessagesController().processCommandMessage(message);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private boolean isAppRunning() {
-        ActivityManager am = (ActivityManager) Utils.getApp().getSystemService(Context.ACTIVITY_SERVICE);
-        if (am != null) {
-            String pkgName = AppUtils.getAppPackageName();
-            List<ActivityManager.RunningTaskInfo> taskInfo = am.getRunningTasks(Integer.MAX_VALUE);
-            if (taskInfo != null && taskInfo.size() > 0) {
-                for (ActivityManager.RunningTaskInfo aInfo : taskInfo) {
-                    if (aInfo.baseActivity != null && pkgName.equals(aInfo.baseActivity.getPackageName())) {
-                        LogUtils.d(aInfo.baseActivity);
-                        return true;
-                    }
-                }
-            }
-            List<ActivityManager.RunningServiceInfo> serviceInfo = am.getRunningServices(Integer.MAX_VALUE);
-            if (serviceInfo != null && serviceInfo.size() > 0) {
-                for (ActivityManager.RunningServiceInfo aInfo : serviceInfo) {
-                    if (aInfo.service != null
-                            && !aInfo.service.getClassName().contains(GcmPushListenerService.class.getSimpleName())
-                            && pkgName.equals(aInfo.service.getPackageName())) {
-                        LogUtils.d(aInfo.service);
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
     }
 
     @TargetApi(Build.VERSION_CODES.P)
