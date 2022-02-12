@@ -84,7 +84,6 @@ import androidx.annotation.Nullable;
 import com.blankj.utilcode.util.ActivityUtils;
 import com.blankj.utilcode.util.LogUtils;
 import com.blankj.utilcode.util.NotificationUtils;
-import com.blankj.utilcode.util.ScreenUtils;
 import com.blankj.utilcode.util.ThreadUtils;
 
 import org.json.JSONObject;
@@ -97,7 +96,7 @@ import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
-import org.telegram.messenger.GroupCallUtil;
+import org.telegram.util.GroupCallUtil;
 import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
@@ -135,7 +134,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -4302,6 +4300,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 
     public void endGroupCallRinging() {
         stopSelf();
+        MessagesController.getGlobalMainSettings().edit().putLong("lastHangup", System.currentTimeMillis()).apply();
         GroupCallUtil.sendCommandMessage(GroupCallUtil.REFUSE_INVITE, chat.id, UserConfig.getInstance(currentAccount).getCurrentUser());
     }
 

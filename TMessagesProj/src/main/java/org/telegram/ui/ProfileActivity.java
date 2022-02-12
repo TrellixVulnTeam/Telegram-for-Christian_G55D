@@ -80,6 +80,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 
+import com.blankj.utilcode.util.SPUtils;
+import com.blankj.utilcode.util.ToastUtils;
+
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
@@ -159,6 +162,7 @@ import org.telegram.ui.Components.StickerEmptyView;
 import org.telegram.ui.Components.TimerDrawable;
 import org.telegram.ui.Components.UndoView;
 import org.telegram.ui.Components.voip.VoIPHelper;
+import org.telegram.util.TimeRecordUtil;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -347,6 +351,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int delete_avatar = 35;
     private final static int add_photo = 36;
     private final static int qr_button = 37;
+    private final static int time_record = 38;
 
     private Rect rect = new Rect();
 
@@ -703,15 +708,15 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             selectedBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             selectedBarPaint.setColor(0xffffffff);
 
-            topOverlayGradient = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] {0x42000000, 0});
+            topOverlayGradient = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x42000000, 0});
             topOverlayGradient.setShape(GradientDrawable.RECTANGLE);
 
-            bottomOverlayGradient = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, new int[] {0x42000000, 0});
+            bottomOverlayGradient = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0x42000000, 0});
             bottomOverlayGradient.setShape(GradientDrawable.RECTANGLE);
 
             for (int i = 0; i < 2; i++) {
                 final GradientDrawable.Orientation orientation = i == 0 ? GradientDrawable.Orientation.LEFT_RIGHT : GradientDrawable.Orientation.RIGHT_LEFT;
-                pressedOverlayGradient[i] = new GradientDrawable(orientation, new int[] {0x32000000, 0});
+                pressedOverlayGradient[i] = new GradientDrawable(orientation, new int[]{0x32000000, 0});
                 pressedOverlayGradient[i].setShape(GradientDrawable.RECTANGLE);
             }
 
@@ -1696,9 +1701,21 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         if (call == null) {
                             VoIPHelper.showGroupCallAlert(ProfileActivity.this, currentChat, null, false, getAccountInstance());
                         } else {
-                            VoIPHelper.startCall(currentChat, null, null, false, getParentActivity(), ProfileActivity.this, getAccountInstance());
+                            TimeRecordUtil.tempJoinCall(call, getMessagesController().getChat(chatId), v -> {
+                                VoIPHelper.startCall(currentChat, null, null, false, getParentActivity(), ProfileActivity.this, getAccountInstance());
+                            });
                         }
                     }
+                } else if (id == time_record) {
+                    SPUtils sp = SPUtils.getInstance("TimeRecord_" + currentChat.id + "_" + UserConfig.selectedAccount);
+                    if (sp.getAll().size() == 0) {
+                        ToastUtils.showShort(LocaleController.getString("TimeRecordNoData"), R.string.TimeRecordNoData);
+                        return;
+                    }
+
+                    Bundle bundle = new Bundle();
+                    bundle.putLong("chatId", currentChat.id);
+                    presentFragment(new TimeRecordActivity(bundle));
                 } else if (id == search_members) {
                     Bundle args = new Bundle();
                     args.putLong("chat_id", chatId);
@@ -2041,7 +2058,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         layoutParams.topMargin = actionBarHeight;
                     }
                 }
-                
+
                 int height = MeasureSpec.getSize(heightMeasureSpec);
                 super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
 
@@ -2408,7 +2425,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
             @Override
             public boolean drawChild(Canvas canvas, View child, long drawingTime) {
-                if (getItemAnimator().isRunning() && child.getBackground() == null  && child.getTranslationY() != 0) {
+                if (getItemAnimator().isRunning() && child.getBackground() == null && child.getTranslationY() != 0) {
                     boolean useAlpha = listView.getChildAdapterPosition(child) == sharedMediaRow && child.getAlpha() != 1f;
                     if (useAlpha) {
                         whitePaint.setAlpha((int) (255 * listView.getAlpha() * child.getAlpha()));
@@ -2802,7 +2819,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 suggestions.add("VALIDATE_PHONE_NUMBER");
                                 suggestions.add("VALIDATE_PASSWORD");
                                 getNotificationCenter().postNotificationName(NotificationCenter.newSuggestionsAvailable);
-                            }  else if (which == 17) {
+                            } else if (which == 17) {
                                 SharedConfig.toggleDebugChatBlur();
                             }
                         });
@@ -2978,7 +2995,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (transitionOnlineText != null) {
                     canvas.save();
                     canvas.translate(onlineTextView[0].getX(), onlineTextView[0].getY());
-                    canvas.saveLayerAlpha(0 ,0, transitionOnlineText.getMeasuredWidth(), transitionOnlineText.getMeasuredHeight(), (int) (255 * (1f - animationProgress)), Canvas.ALL_SAVE_FLAG);
+                    canvas.saveLayerAlpha(0, 0, transitionOnlineText.getMeasuredWidth(), transitionOnlineText.getMeasuredHeight(), (int) (255 * (1f - animationProgress)), Canvas.ALL_SAVE_FLAG);
                     transitionOnlineText.draw(canvas);
                     canvas.restore();
                     canvas.restore();
@@ -3048,6 +3065,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         avatarProgressView = new RadialProgressView(context) {
             private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
             {
                 paint.setColor(0x55000000);
             }
@@ -3343,6 +3361,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         pinchToZoomHelper = new PinchToZoomHelper(decorView, frameLayout) {
 
             Paint statusBarPaint;
+
             @Override
             protected void invalidateViews() {
                 super.invalidateViews();
@@ -4935,7 +4954,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
         invalidateIsInLandscapeMode();
         if (listAdapter != null) {
-           // saveScrollPosition();
+            // saveScrollPosition();
             firstLayout = true;
             listAdapter.notifyDataSetChanged();
         }
@@ -6163,6 +6182,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
         } else if (chatId != 0) {
             TLRPC.Chat chat = getMessagesController().getChat(chatId);
+            if (ChatObject.canManageCalls(chat))
+                otherItem.addSubItem(time_record, R.drawable.msg_timer, LocaleController.getString("TimeRecord", R.string.TimeRecord));
             hasVoiceChatItem = false;
             if (ChatObject.isChannel(chat)) {
                 if (ChatObject.hasAdminRights(chat) || chat.megagroup && ChatObject.canChangeChatInfo(chat)) {
@@ -6173,6 +6194,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         otherItem.addSubItem(call_item, R.drawable.msg_voicechat, chat.megagroup && !chat.gigagroup ? LocaleController.getString("StartVoipChat", R.string.StartVoipChat) : LocaleController.getString("StartVoipChannel", R.string.StartVoipChannel));
                         hasVoiceChatItem = true;
                     }
+
                     if (chatInfo.can_view_stats) {
                         otherItem.addSubItem(statistics, R.drawable.msg_stats, LocaleController.getString("Statistics", R.string.Statistics));
                     }
@@ -8260,7 +8282,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     0, 0);
             combinedDrawable.setIconSize(AndroidUtilities.dp(56), AndroidUtilities.dp(56));
             writeButton.setBackground(combinedDrawable);
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
     }
 
     private boolean isQrNeedVisible() {

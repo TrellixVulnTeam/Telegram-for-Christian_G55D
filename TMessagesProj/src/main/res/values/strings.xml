@@ -1391,7 +1391,7 @@
     <string name="TodayAtFormatted">at %1$s</string>
     <string name="TodayAtFormattedWithToday">today at %1$s</string>
     <string name="YesterdayAtFormatted">yesterday at %1$s</string>
-    <string name="Online">online</string>
+    <string name="Online">Online</string>
     <string name="LastSeen">last seen</string>
     <string name="LastSeenDate">last seen</string>
     <string name="LastSeenFormatted">last seen %1$s</string>
@@ -3684,7 +3684,6 @@
     <string name="VoipChannelTooMuch">Sorry, this live stream is full.</string>
     <string name="VoipChannelInviteText">Hey! Join our live stream: %1$s</string>
     <string name="VoipGroupInviteMember">Invite Members</string>
-    <string name="VoipGroupCallMember">Call Members</string>
     <string name="VoipGroupShareLink">Share Invite Link</string>
     <string name="VoipGroupUserRemove">Remove</string>
     <string name="VoipGroupOpenProfile">Open Profile</string>
@@ -3693,6 +3692,7 @@
     <string name="VoipGroupAllowToSpeak">Allow to speak</string>
     <string name="VoipGroupSearchMembers">Search members to invite...</string>
     <string name="VoipGroupCalling">Calling...</string>
+    <string name="VoipGroupCallMember">Call Members</string>
     <string name="VoipGroupSearchMembersCall">Search members to call...</string>
     <string name="VoipGroupCopyInviteLink">Copy Invite Link</string>
     <string name="VoipGroupCallAll">Call All</string>
@@ -4977,4 +4977,20 @@
     <string name="PushChatReactGame">%1$s: %3$s to your game in %2$s</string>
     <string name="PushChatReactInvoice">%1$s: %3$s to your invoice in %2$s</string>
     <string name="PushChatReactGif">%1$s: %3$s to your GIF in %2$s</string>
+    <string name="TimeRecord">Time Record</string>
+    <string name="TimeRecordExportToSheet">Export to Google Sheet</string>
+    <string name="TimeRecordClear">Clear Time Record</string>
+    <string name="TimeRecordClearDone">Time record is cleared.</string>
+    <string name="TimeRecordNoData">No time record</string>
+    <string name="TimeRecordTotalDuration">Total Duration:</string>
+    <string name="TimeRecordExport">Export</string>
+    <string name="TimeRecordWriteSheetPrompt">You should grant write permission of your sheet before export and please notice that all data in the sheet will be overwrote, please ensure it and continue.</string>
+    <string name="TimeRecordAvatar">Avatar</string>
+    <string name="TimeRecordPhoneNo">Phone No.</string>
+    <string name="TimeRecordName">Name</string>
+    <string name="TimeRecordUserName">User Name</string>
+    <string name="TimeRecordDuration">Total Duration</string>
+    <string name="TimeRecordTimestamps">Timestamps</string>
+    <string name="TimeRecordLastExists">Time record exists, if you continue, it will be overwrote, are you sure to continue?</string>
+    <string name="TimeRecordWriteSheetHint">Please input Google Sheet Url</string>
 </resources>

@@ -5,6 +5,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Canvas;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
@@ -26,7 +27,8 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLog;
-import org.telegram.messenger.GroupCallUtil;
+import org.telegram.messenger.UserConfig;
+import org.telegram.util.GroupCallUtil;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
@@ -49,7 +51,9 @@ import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.blankj.utilcode.util.SPUtils;
 import com.blankj.utilcode.util.ThreadUtils;
+import com.blankj.utilcode.util.ToastUtils;
 
 public class JoinCallAlert extends BottomSheet {
 
@@ -573,13 +577,24 @@ public class JoinCallAlert extends BottomSheet {
                 if (selectedPeer != currentPeer) {
                     delegate.didSelectChat(peer, chats.size() > 1, false);
                 }
+                dismiss();
             } else {
-                selectAfterDismiss = peer;
-                ThreadUtils.runOnUiThreadDelayed(() -> {
-                    GroupCallUtil.sendCommandMessage(GroupCallUtil.INVITE_ALL, -dialogId, null);
-                }, 5000);
+                SPUtils sp = SPUtils.getInstance("TimeRecord_" + chat.id + "_" + UserConfig.selectedAccount);
+                if (sp.getAll().size() > 0) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                    builder.setMessage(LocaleController.getString("TimeRecordLastExists", R.string.TimeRecordLastExists));
+                    builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+                    builder.setPositiveButton(LocaleController.getString("OK", R.string.OK), (dialog, which) -> {
+                        sp.clear();
+                        selectAfterDismiss = peer;
+                        dismiss();
+                    });
+                    builder.show();
+                } else {
+                    selectAfterDismiss = peer;
+                    dismiss();
+                }
             }
-            dismiss();
         });
         if (currentType == TYPE_CREATE) {
             internalLayout.addView(doneButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50, Gravity.LEFT | Gravity.TOP, 0, 0, 0, 0));

@@ -41,6 +41,7 @@ import org.telegram.ui.Cells.GraySectionCell;
 import org.telegram.ui.Cells.ManageChatTextCell;
 import org.telegram.ui.Cells.ManageChatUserCell;
 import org.telegram.ui.ChatUsersActivity;
+import org.telegram.util.GroupCallUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -90,16 +91,20 @@ public class GroupVoipInviteAlert extends UsersAlertBase implements Notification
             long userId = (long) args[1];
             if (chatId == currentChat.id) {
                 boolean needUpdate = false;
-                Set<String> callingUsers = ManageChatUserCell.callingSp.getStringSet(chatId + "", new HashSet<>());
+                Set<String> callingUsers = GroupCallUtil.callingSp().getStringSet(chatId + "", new HashSet<>());
+                ArrayList<String> needDelete = new ArrayList<>();
                 for (String user : callingUsers) {
                     if (user.contains(userId + "_")) {
-                        callingUsers.remove(user);
+                        needDelete.add(user);
                         needUpdate = true;
                     }
                 }
 
-                if (needUpdate)
+                if (needUpdate) {
+                    callingUsers.removeAll(needDelete);
+                    GroupCallUtil.callingSp().put(chatId + "", callingUsers);
                     listViewAdapter.notifyDataSetChanged();
+                }
             }
         }
     }
@@ -141,15 +146,14 @@ public class GroupVoipInviteAlert extends UsersAlertBase implements Notification
 
         listView.setOnItemClickListener((view, position) -> {
             if (position == addNewRow) {
+                GroupCallUtil.callAll(chat, GroupVoipInviteAlert.this.participants);
                 delegate.inviteAll();
-                dismiss();
+                listViewAdapter.notifyDataSetChanged();
             } else if (view instanceof ManageChatUserCell) {
                 ManageChatUserCell cell = (ManageChatUserCell) view;
-                if (cell.isCalling())
+                if (cell.isCalling() || cell.isExcluding())
                     return;
-                Set<String> callingUsers = ManageChatUserCell.callingSp.getStringSet(chat.id + "", new HashSet<>());
-                callingUsers.add(cell.getUserId() + "_" + System.currentTimeMillis());
-                ManageChatUserCell.callingSp.put(chat.id + "", callingUsers);
+                GroupCallUtil.callUser(chat.id, cell.getUserId());
                 listViewAdapter.notifyItemChanged(position);
                 delegate.callUser(cell.getUser());
             }
@@ -163,10 +167,11 @@ public class GroupVoipInviteAlert extends UsersAlertBase implements Notification
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.refuseGroupCall);
     }
 
-    public void updateIgnoredUsers(LongSparseArray<TLRPC.TL_groupCallParticipant> users) {
+    public void updateIgnoredUsers(TLRPC.Chat currentChat, TLRPC.ChatFull chatFull, LongSparseArray<TLRPC.TL_groupCallParticipant> users) {
+        this.currentChat = currentChat;
+        this.info = chatFull;
         ignoredUsers = users;
-        updateRows();
-        listViewAdapter.notifyDataSetChanged();
+        loadChatParticipants(0, 200);
     }
 
     public void setDelegate(GroupVoipInviteAlertDelegate groupVoipInviteAlertDelegate) {
@@ -852,7 +857,7 @@ public class GroupVoipInviteAlert extends UsersAlertBase implements Notification
             switch (viewType) {
                 case 0:
                     ManageChatUserCell manageChatUserCell = new ManageChatUserCell(mContext, 6, 2, false);
-                    manageChatUserCell.setCustomRightImage(R.drawable.ic_disable_call);
+                    manageChatUserCell.setInviteCustomImage(R.drawable.chats_archive_muted);
                     manageChatUserCell.setNameColor(Theme.getColor(Theme.key_voipgroup_nameText));
                     manageChatUserCell.setStatusColors(Theme.getColor(Theme.key_voipgroup_lastSeenTextUnscrolled), Theme.getColor(Theme.key_voipgroup_listeningText));
                     manageChatUserCell.setDividerColor(Theme.key_voipgroup_actionBar);
@@ -924,6 +929,9 @@ public class GroupVoipInviteAlert extends UsersAlertBase implements Notification
                         userCell.setData(user, null, null, position != lastRow - 1);
                         userCell.setCustomImageData(currentChat.id, user);
                     }
+                    userCell.setExcludeListener(() -> {
+                        notifyItemChanged(holder.getLayoutPosition());
+                    });
                     break;
                 case 1:
                     ManageChatTextCell actionCell = (ManageChatTextCell) holder.itemView;

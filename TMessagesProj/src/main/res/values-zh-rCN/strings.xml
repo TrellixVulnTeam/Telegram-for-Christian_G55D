@@ -3691,7 +3691,7 @@
     <string name="VoipGroupDisplayAs">将我显示为...</string>
     <string name="VoipGroupStartAsInfo">选择显示的身份是个人帐号还是你的频道。</string>
     <string name="VoipGroupStartAsInfoGroup">选择你想要以个人账号，群组，还是频道信息作为展示。</string>
-    <string name="VoipGroupContinueAs">继续以  %1$s 作为展示</string>
+    <string name="VoipGroupContinueAs">继续以 %1$s 作为展示</string>
     <string name="VoipGroupEditTitle">修改语音聊天标题</string>
     <string name="VoipChannelEditTitle">编辑直播标题</string>
     <string name="VoipGroupEditPermissions">修改权限</string>
@@ -4955,7 +4955,27 @@
     <string name="formatDateScheduleDay">MMMd日EEEE</string>
     <string name="login_with_telegram">通过 Telegram 登录</string>
     <string name="telegram_passport">Telegram 通行证</string>
-    <string name="CancelForwardMessage">Do you want to cancel forwarding or to forward messages to a different chat?</string>
-    <string name="NotificationMessageGroupPoll">%1$s sent a poll to the group %2$s</string>
-    <string name="WidgetPasscode">​\n\nNote: Your passcode will be **ignored** for widgets.</string>
+    <string name="CancelForwardMessage">您想取消转发或将信息转发到不同的聊天室吗？</string>
+    <string name="NotificationMessageGroupPoll">%1$s向群组%2$s发起了一个投票</string>
+    <string name="WidgetPasscode">​\n\n警告：您的密码将被小工具**忽略**。</string>
+
+    <string name="TimeRecord">时间记录</string>
+    <string name="TimeRecordExportToSheet">导出到Google Sheet</string>
+    <string name="TimeRecordClear">清理时间记录</string>
+    <string name="TimeRecordClearDone">时间记录已清理</string>
+    <string name="TimeRecordNoData">没有时间记录</string>
+    <string name="TimeRecordTotalDuration">总时长:</string>
+    <string name="TimeRecordExport">导出</string>
+    <string name="TimeRecordWriteSheetPrompt">导出前你需要打开Google Sheet的编辑权限。请注意每次导出都会覆盖Google Sheet中的所有数据。</string>
+    <string name="TimeRecordAvatar">头像</string>
+    <string name="TimeRecordPhoneNo">手机号</string>
+    <string name="TimeRecordName">姓名</string>
+    <string name="TimeRecordUserName">用户名</string>
+    <string name="TimeRecordDuration">总时长</string>
+    <string name="TimeRecordTimestamps">时间戳</string>
+    <string name="TimeRecordLastExists">检测到上次呼叫的时间记录已存在，如果继续，时间记录将会被覆盖，确认继续吗？</string>
+    <string name="VoipGroupCallMember">呼叫群组人员</string>
+    <string name="VoipGroupSearchMembersCall">搜索人员以呼叫...</string>
+    <string name="TimeRecordWriteSheetHint">请输入Google Sheet地址</string>
+
 </resources>

@@ -1,5 +1,4 @@
-<resources
-    xmlns:android="http://schemas.android.com/apk/res/android">
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--THEMES-->
 
@@ -73,18 +72,24 @@
         <item name="android:hyphenationFrequency">none</item>
     </style>
 
+    <style name="DividerStyle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">0.5dp</item>
+        <item name="android:background">@color/divider</item>
+    </style>
+
     <!-- POPUP -->
 
-    <style name="PopupAnimation" parent="android:Animation" mce_bogus="1">
+    <style name="PopupAnimation" mce_bogus="1" parent="android:Animation">
         <item name="android:windowEnterAnimation">@anim/popup_in</item>
         <item name="android:windowExitAnimation">@anim/popup_out</item>
     </style>
 
-    <style name="PopupContextAnimation" parent="android:Animation" mce_bogus="1">
+    <style name="PopupContextAnimation" mce_bogus="1" parent="android:Animation">
         <item name="android:windowEnterAnimation">@anim/popup_context_in</item>
     </style>
 
-    <style name="PopupContextAnimation2" parent="android:Animation" mce_bogus="1">
+    <style name="PopupContextAnimation2" mce_bogus="1" parent="android:Animation">
         <item name="android:windowEnterAnimation">@anim/popup_context_in</item>
         <item name="android:windowExitAnimation">@anim/popup_out</item>
     </style>
@@ -144,14 +149,14 @@
 
     <!--APP WIDGET-->
 
-    <style name="Base.Theme.TMessages.AppWidget" parent="Theme.TMessages"/>
+    <style name="Base.Theme.TMessages.AppWidget" parent="Theme.TMessages" />
 
     <style name="Theme.TMessages.AppWidget" parent="Base.Theme.TMessages.AppWidget">
         <item name="widgetBackgroundCornerRadius">@dimen/app_widget_background_corner_radius</item>
 
-        <item name="widgetPreviewTitle"/>
-        <item name="widgetPreviewContent"/>
-        <item name="widgetPreviewTime"/>
+        <item name="widgetPreviewTitle" />
+        <item name="widgetPreviewContent" />
+        <item name="widgetPreviewTime" />
         <item name="widgetPreviewDot">0</item>
         <item name="widgetPreviewImage">@null</item>
     </style>

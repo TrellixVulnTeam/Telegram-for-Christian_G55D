@@ -56,14 +56,11 @@ import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
 import androidx.core.graphics.drawable.IconCompat;
 
-import com.blankj.utilcode.util.AppUtils;
-import com.blankj.utilcode.util.LogUtils;
-import com.blankj.utilcode.util.Utils;
-
 import org.telegram.messenger.support.LongSparseIntArray;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.BubbleActivity;
+import org.telegram.util.GroupCallUtil;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.PopupNotificationActivity;
 

@@ -35,6 +35,7 @@ import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Adapters.DialogsSearchAdapter;
 import org.telegram.ui.EditWidgetActivity;
+import org.telegram.util.TimeRecordUtil;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -6758,6 +6759,28 @@ public class MessagesStorage extends BaseController {
                 FileLog.e(e);
             }
         });
+    }
+
+    public List<TLRPC.Message> getMessagesForTimeRecord(long chatId) {
+        List<TLRPC.Message> messages = new ArrayList<>();
+        long startTime = TimeRecordUtil.timeHoleSp(chatId).getLong("startTime");
+        long endTime = TimeRecordUtil.timeHoleSp(chatId).getLong("endTime", System.currentTimeMillis());
+        String messageSelect = String.format(Locale.US, "SELECT m.data,m.mid,r.random_id FROM messages_v2 as m LEFT JOIN randoms_v2 as r ON r.mid = m.mid AND r.uid = m.uid " +
+                "where m.uid=%d and m.date >= %d and m.date <= %d", -chatId, startTime/1000, endTime/1000);
+        try {
+            SQLiteCursor cursor = database.queryFinalized(messageSelect);
+            while (cursor.next()) {
+                NativeByteBuffer data = cursor.byteBufferValue(0);
+                if (data != null) {
+                    TLRPC.Message message = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
+                    message.id = cursor.intValue(1);
+                    messages.add(message);
+                }
+            }
+        } catch (SQLiteException e) {
+            e.printStackTrace();
+        }
+        return messages;
     }
 
     public Runnable getMessagesInternal(long dialogId, long mergeDialogId, int count, int max_id, int offset_date, int minDate, int classGuid, int load_type, boolean scheduled, int replyMessageId, int loadIndex, boolean processMessages) {

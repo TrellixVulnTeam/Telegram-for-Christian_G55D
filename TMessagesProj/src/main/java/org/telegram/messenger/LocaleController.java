@@ -325,6 +325,26 @@ public class LocaleController {
         languagesDict.put(localeInfo.shortName, localeInfo);
 
         localeInfo = new LocaleInfo();
+        localeInfo.name = "简体中文";
+        localeInfo.nameEnglish = "Simplified Chinese";
+        localeInfo.pluralLangCode = "zh";
+        localeInfo.shortName = "zh_cn";
+        localeInfo.pathToFile = null;
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);
+
+        localeInfo = new LocaleInfo();
+        localeInfo.name = "Монгол";
+        localeInfo.nameEnglish = "Mongolian";
+        localeInfo.pluralLangCode = "mn";
+        localeInfo.shortName = "mn";
+        localeInfo.pathToFile = null;
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);
+
+        localeInfo = new LocaleInfo();
         localeInfo.name = "Italiano";
         localeInfo.nameEnglish = "Italian";
         localeInfo.shortName = localeInfo.pluralLangCode = "it";
@@ -337,16 +357,6 @@ public class LocaleController {
         localeInfo.name = "Русский";
         localeInfo.nameEnglish = "Russian";
         localeInfo.shortName = localeInfo.pluralLangCode = "ru";
-        localeInfo.pathToFile = null;
-        localeInfo.builtIn = true;
-        languages.add(localeInfo);
-        languagesDict.put(localeInfo.shortName, localeInfo);
-
-        localeInfo = new LocaleInfo();
-        localeInfo.name = "简体中文";
-        localeInfo.nameEnglish = "Simplified Chinese";
-        localeInfo.pluralLangCode = "zh";
-        localeInfo.shortName = "zh_cn";
         localeInfo.pathToFile = null;
         localeInfo.builtIn = true;
         languages.add(localeInfo);

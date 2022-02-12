@@ -42,9 +42,6 @@ import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Property;
-import android.util.SparseArray;
-import android.util.SparseBooleanArray;
-import android.util.SparseIntArray;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
@@ -83,7 +80,6 @@ import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
-import org.telegram.messenger.GroupCallUtil;
 import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LocaleController;
@@ -92,6 +88,7 @@ import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
+import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.support.LongSparseIntArray;
@@ -151,6 +148,8 @@ import org.telegram.ui.Components.voip.GroupCallRenderersContainer;
 import org.telegram.ui.Components.voip.GroupCallStatusIcon;
 import org.telegram.ui.Components.voip.PrivateVideoPreviewDialog;
 import org.telegram.ui.Components.voip.VoIPToggleButton;
+import org.telegram.util.GroupCallUtil;
+import org.telegram.util.TimeRecordUtil;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -161,14 +160,15 @@ import java.util.Locale;
 
 import static android.content.Context.AUDIO_SERVICE;
 
-import com.blankj.utilcode.util.ThreadUtils;
-import com.google.android.exoplayer2.util.Log;
+import com.blankj.utilcode.util.GsonUtils;
+import com.blankj.utilcode.util.SPUtils;
 
 public class GroupCallActivity extends BottomSheet implements NotificationCenter.NotificationCenterDelegate, VoIPService.StateListener {
 
     public final static int TABLET_LIST_SIZE = 320;
     public static final long TRANSITION_DURATION = 350;
 
+    private static final int user_item_gap = 0;
     private static final int eveyone_can_speak_item = 1;
     private static final int admin_can_speak_item = 2;
     private static final int share_invite_link_item = 3;
@@ -180,7 +180,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
     private static final int screen_capture_item = 9;
     private static final int sound_item = 10;
     private static final int noise_item = 11;
-    private static final int user_item_gap = 0;
+    private static final int time_record_item = 12;
 
     private static final int MUTE_BUTTON_STATE_UNMUTE = 0;
     private static final int MUTE_BUTTON_STATE_MUTE = 1;
@@ -1165,6 +1165,9 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                             }
                         }
                     }
+
+                    if (groupVoipInviteAlert != null && groupVoipInviteAlert.isShowing())
+                        groupVoipInviteAlert.updateIgnoredUsers(currentChat, accountInstance.getMessagesController().getChatFull(currentChat.id), call.participants);
                 }
             }
         } else if (id == NotificationCenter.groupCallSpeakingUsersUpdated) {
@@ -1456,9 +1459,6 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
                 containerView.requestLayout();
             }
         }
-
-        if (groupVoipInviteAlert != null && groupVoipInviteAlert.isShowing())
-            groupVoipInviteAlert.updateIgnoredUsers(call.participants);
     }
 
     private void updateVideoParticipantList() {
@@ -5502,6 +5502,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
 
     @Override
     public void dismissInternal() {
+
         if (renderersContainer != null) {
             if (requestFullscreenListener != null) {
                 listView.getViewTreeObserver().removeOnPreDrawListener(requestFullscreenListener);
@@ -6511,7 +6512,20 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
         buttonsContainer.invalidate();
     }
 
-    private static void processOnLeave(ChatObject.Call call, boolean discard, long selfId, Runnable onLeave) {
+    private static void processOnLeave(ChatObject.Call call, TLRPC.Chat currentChat, boolean discard, long selfId, Runnable onLeave) {
+        if (call != null && !discard && ChatObject.canManageCalls(currentChat)) {
+            SPUtils sp = TimeRecordUtil.timeRecordSp(call.chatId);
+            ChatObject.TimeRecord record = new ChatObject.TimeRecord();
+            long myId = AccountInstance.getInstance(UserConfig.selectedAccount).getUserConfig().getClientUserId();
+            if (sp.contains(myId + "")) {
+                record = GsonUtils.fromJson(sp.getString(myId + ""), ChatObject.TimeRecord.class);
+                if (record.getOfflines().size() < record.getOnlines().size()) {
+                    record.getOfflines().add(System.currentTimeMillis());
+                    sp.put(myId + "", GsonUtils.toJson(record));
+                }
+            }
+        }
+
         if (VoIPService.getSharedInstance() != null) {
             VoIPService.getSharedInstance().hangUp(discard ? 1 : 0);
         }
@@ -6540,6 +6554,8 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
             onLeave.run();
         }
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.didStartedCall);
+
+
     }
 
     public static void onLeaveClick(Context context, Runnable onLeave, boolean fromOverlayWindow) {
@@ -6552,7 +6568,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
 
         long selfId = service.getSelfId();
         if (!ChatObject.canManageCalls(currentChat)) {
-            processOnLeave(call, false, selfId, onLeave);
+            processOnLeave(call, currentChat, false, selfId, onLeave);
             return;
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -6598,7 +6614,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
         builder.setCustomViewOffset(12);
         builder.setView(linearLayout);
         builder.setDialogButtonColorKey(Theme.key_voipgroup_listeningText);
-        builder.setPositiveButton(LocaleController.getString("VoipGroupLeave", R.string.VoipGroupLeave), (dialogInterface, position) -> processOnLeave(call, cells[0].isChecked(), selfId, onLeave));
+        builder.setPositiveButton(LocaleController.getString("VoipGroupLeave", R.string.VoipGroupLeave), (dialogInterface, position) -> processOnLeave(call, currentChat, cells[0].isChecked(), selfId, onLeave));
         builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
         if (fromOverlayWindow) {
             builder.setDimEnabled(false);

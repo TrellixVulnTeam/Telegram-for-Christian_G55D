@@ -52,6 +52,8 @@ import org.telegram.ui.Components.JoinCallByUrlAlert;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.GroupCallActivity;
 import org.telegram.ui.LaunchActivity;
+import org.telegram.util.GroupCallUtil;
+import org.telegram.util.TimeRecordUtil;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -310,6 +312,14 @@ public class VoIPHelper {
             if (call != null && call.isScheduled()) {
                 GroupCallActivity.create((LaunchActivity) activity, accountInstance, chat, peer, hasFewPeers, hash);
                 return;
+            }
+        }
+
+        if (chat != null && createCall && ChatObject.canManageCalls(chat)) {
+            TLRPC.ChatFull chatFull = accountInstance.getMessagesController().getChatFull(chat.id);
+            if (chatFull != null) {
+                GroupCallUtil.startGroupCall(chatFull);
+                TimeRecordUtil.startGroupCall(chat.id);
             }
         }
 

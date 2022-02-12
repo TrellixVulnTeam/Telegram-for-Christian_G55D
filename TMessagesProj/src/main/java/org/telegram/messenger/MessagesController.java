@@ -30,7 +30,9 @@ import androidx.core.app.NotificationManagerCompat;
 
 import com.blankj.utilcode.util.GsonUtils;
 import com.blankj.utilcode.util.LogUtils;
+import com.blankj.utilcode.util.SPUtils;
 
+import org.json.JSONArray;
 import org.telegram.SQLite.SQLiteCursor;
 import org.telegram.messenger.support.LongSparseIntArray;
 import org.telegram.messenger.support.LongSparseLongArray;
@@ -52,8 +54,10 @@ import org.telegram.ui.Components.MotionBackgroundDrawable;
 import org.telegram.ui.Components.SwipeGestureSettingsView;
 import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.EditWidgetActivity;
+import org.telegram.util.GroupCallUtil;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.ProfileActivity;
+import org.telegram.util.TimeRecordUtil;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -68,7 +72,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.stream.Collectors;
 
 public class MessagesController extends BaseController implements NotificationCenter.NotificationCenterDelegate {
 
@@ -13430,6 +13433,9 @@ public class MessagesController extends BaseController implements NotificationCe
                         if (update.call instanceof TLRPC.TL_groupCallDiscarded) {
                             if (VoIPService.getSharedInstance() != null && VoIPService.getSharedInstance().isGroupCallRinging())
                                 VoIPService.getSharedInstance().endGroupCallRinging();
+
+                            TLRPC.Chat chat = getChat(update.chat_id);
+                            TimeRecordUtil.autoAddOfflineWhenCallEnd(chat, update.chat_id);
                         }
                     } else if (baseUpdate instanceof TLRPC.TL_updatePhoneCall) {
                         TLRPC.TL_updatePhoneCall upd = (TLRPC.TL_updatePhoneCall) baseUpdate;

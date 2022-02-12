@@ -13,20 +13,28 @@ import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.SparseArray;
 
-import com.google.android.exoplayer2.util.Log;
+import androidx.collection.LongSparseArray;
 
+import com.blankj.utilcode.util.LogUtils;
+import com.blankj.utilcode.util.SPUtils;
+import com.google.android.exoplayer2.util.Log;
+import com.google.gson.annotations.Expose;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.telegram.messenger.voip.Instance;
 import org.telegram.messenger.voip.VoIPService;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.GroupCallActivity;
+import org.telegram.util.TimeRecordUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-
-import androidx.collection.LongSparseArray;
+import java.util.List;
 
 public class ChatObject {
 
@@ -56,6 +64,59 @@ public class ChatObject {
     public final static int VIDEO_FRAME_HAS_FRAME = 2;
 
     private static final int MAX_PARTICIPANTS_COUNT = 5000;
+
+    public static class TimeRecord {
+        private transient long userId;
+        private transient String name;
+        private List<Long> onlines = new ArrayList<>();
+        private List<Long> offlines = new ArrayList<>();
+
+        public long getUserId() {
+            return userId;
+        }
+
+        public void setUserId(long userId) {
+            this.userId = userId;
+        }
+
+        public String getDuration() {
+            List<Long> tempOfflines = new ArrayList<>(offlines);
+            if (tempOfflines.size() < onlines.size())
+                tempOfflines.add(System.currentTimeMillis());
+            if(tempOfflines.size() != onlines.size())
+                return "";
+            int minitus = 0;
+            for (int i = 0; i < onlines.size(); i++) {
+                minitus += (tempOfflines.get(i) - onlines.get(i)) / (1000 * 60);
+            }
+
+            return LocaleController.formatPluralString("Minutes", minitus);
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public void setOnlines(List<Long> onlines) {
+            this.onlines = onlines;
+        }
+
+        public void setOfflines(List<Long> offlines) {
+            this.offlines = offlines;
+        }
+
+        public List<Long> getOnlines() {
+            return onlines;
+        }
+
+        public List<Long> getOfflines() {
+            return offlines;
+        }
+    }
 
     public static class Call {
         public TLRPC.GroupCall call;
@@ -111,7 +172,7 @@ public class ChatObject {
             public void run() {
                 long uptime = SystemClock.uptimeMillis();
                 boolean update = false;
-                for(int i = 0; i < currentSpeakingPeers.size(); i++) {
+                for (int i = 0; i < currentSpeakingPeers.size(); i++) {
                     long key = currentSpeakingPeers.keyAt(i);
                     TLRPC.TL_groupCallParticipant participant = currentSpeakingPeers.get(key);
                     if (uptime - participant.lastSpeakTime >= 500) {
@@ -834,6 +895,7 @@ public class ChatObject {
             } else {
                 lastParticipantDate = 0;
             }
+
             currentAccount.getNotificationCenter().postNotificationName(NotificationCenter.applyGroupCallVisibleParticipants, time);
             for (int a = 0, N = update.participants.size(); a < N; a++) {
                 TLRPC.TL_groupCallParticipant participant = update.participants.get(a);
@@ -843,6 +905,8 @@ public class ChatObject {
                 }
                 TLRPC.TL_groupCallParticipant oldParticipant = participants.get(pid);
                 if (participant.left) {
+                    TimeRecordUtil.addTimeRecord(chatId, participant, false);
+
                     if (oldParticipant == null && update.version == call.version) {
                         if (BuildVars.LOGS_ENABLED) {
                             FileLog.d("unknowd participant left, reload call");
@@ -905,7 +969,7 @@ public class ChatObject {
                             oldParticipant.muted_by_you = participant.muted_by_you;
                         } else {
                             if ((participant.flags & 128) != 0 && (oldParticipant.flags & 128) == 0) {
-                                participant.flags &=~ 128;
+                                participant.flags &= ~128;
                             }
                             if (participant.volume_by_admin && oldParticipant.volume_by_admin) {
                                 oldParticipant.volume = participant.volume;
@@ -937,6 +1001,9 @@ public class ChatObject {
                         }
                     } else {
                         if (participant.just_joined) {
+                            LogUtils.d(participant.peer.user_id + "join video chat");
+                            TimeRecordUtil.addTimeRecord(chatId, participant, true);
+
                             if (pid != selfId) {
                                 justJoinedId = pid;
                             }
@@ -1330,6 +1397,17 @@ public class ChatObject {
         return false;
     }
 
+    public static boolean isAdmin(TLRPC.ChatParticipant participant) {
+        if (participant instanceof TLRPC.TL_chatParticipantAdmin || participant instanceof TLRPC.TL_chatParticipantCreator)
+            return true;
+        else if (participant instanceof TLRPC.TL_chatChannelParticipant) {
+            TLRPC.ChannelParticipant channelParticipant = ((TLRPC.TL_chatChannelParticipant) participant).channelParticipant;
+            if (channelParticipant instanceof TLRPC.TL_channelParticipantCreator || channelParticipant instanceof TLRPC.TL_channelParticipantAdmin)
+                return true;
+        }
+        return false;
+    }
+
     private static boolean isAdminAction(int action) {
         switch (action) {
             case ACTION_PIN:
@@ -1448,14 +1526,14 @@ public class ChatObject {
             }
             if (chat.default_banned_rights == null && (
                     chat instanceof TLRPC.TL_chat_layer92 ||
-                    chat instanceof TLRPC.TL_chat_old ||
-                    chat instanceof TLRPC.TL_chat_old2 ||
-                    chat instanceof TLRPC.TL_channel_layer92 ||
-                    chat instanceof TLRPC.TL_channel_layer77 ||
-                    chat instanceof TLRPC.TL_channel_layer72 ||
-                    chat instanceof TLRPC.TL_channel_layer67 ||
-                    chat instanceof TLRPC.TL_channel_layer48 ||
-                    chat instanceof TLRPC.TL_channel_old)) {
+                            chat instanceof TLRPC.TL_chat_old ||
+                            chat instanceof TLRPC.TL_chat_old2 ||
+                            chat instanceof TLRPC.TL_channel_layer92 ||
+                            chat instanceof TLRPC.TL_channel_layer77 ||
+                            chat instanceof TLRPC.TL_channel_layer72 ||
+                            chat instanceof TLRPC.TL_channel_layer67 ||
+                            chat instanceof TLRPC.TL_channel_layer48 ||
+                            chat instanceof TLRPC.TL_channel_old)) {
                 return true;
             }
             if (chat.default_banned_rights == null || getBannedRight(chat.default_banned_rights, action)) {

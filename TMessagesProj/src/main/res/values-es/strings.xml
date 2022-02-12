@@ -4482,4 +4482,22 @@
     <string name="RemindDayAt">\'Recordar el\' d \'de\' MMM \'a las\' HH:mm</string>
     <string name="RemindDayYearAt">\'Recordar el\' d \'de\' MMM \'de\' yyyy \'a las\' HH:mm</string>
     <string name="BotsMenuTitle">Menu</string>
+
+    <string name="TimeRecord">Registro de tiempo</string>
+    <string name="TimeRecordExportToSheet">Exportar a Google Sheet</string>
+    <string name="TimeRecordClear">Borrar registro de tiempo</string>
+    <string name="TimeRecordClearDone">El registro de tiempo se borra.</string>
+    <string name="TimeRecordNoData">No hay registro de tiempo</string>
+    <string name="TimeRecordTotalDuration">Duración total:</string>
+    <string name="TimeRecordExport">Exportación</string>
+    <string name="TimeRecordWriteSheetPrompt">Debe conceder el permiso de escritura de su hoja antes de la exportación y tenga en cuenta que todos los datos de la hoja se sobrescribirán, asegúrese de ello y continúe.</string>
+    <string name="TimeRecordAvatar">Avatar</string>
+    <string name="TimeRecordPhoneNo">Número de teléfono</string>
+    <string name="TimeRecordName">Nombre</string>
+    <string name="TimeRecordUserName">Nombre de usuario</string>
+    <string name="TimeRecordDuration">Duración total</string>
+    <string name="TimeRecordTimestamps">Sellos de tiempo</string>
+    <string name="TimeRecordLastExists">El registro de tiempo existe, si continúa, se sobrescribirá, ¿está seguro de continuar?</string>
+    <string name="TimeRecordWriteSheetHint">Por favor, introduzca la Url de Google Sheet</string>
+
 </resources>

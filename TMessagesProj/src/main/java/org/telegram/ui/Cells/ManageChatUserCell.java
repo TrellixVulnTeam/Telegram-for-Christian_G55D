@@ -17,11 +17,9 @@ import android.view.Gravity;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
-import com.blankj.utilcode.util.SPUtils;
-
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
-import org.telegram.messenger.GroupCallUtil;
+import org.telegram.util.GroupCallUtil;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
@@ -69,12 +67,10 @@ public class ManageChatUserCell extends FrameLayout {
     private String dividerColor;
 
     private ManageChatUserCellDelegate delegate;
-
-    public static SPUtils excludeSp = SPUtils.getInstance("excludeUsers");
-    public static SPUtils callingSp = SPUtils.getInstance("callingUsers");
+    private UnExcludeListener excludeListener;
 
     public void setCustomImageData(long chatId, TLRPC.User user) {
-        Set<String> excludeUsers = excludeSp.getStringSet(chatId + "", new HashSet<>());
+        Set<String> excludeUsers = GroupCallUtil.excludeSp().getStringSet(chatId + "", new HashSet<>());
 
         if (excludeUsers.contains(user.id + "")) {
             customImageView.setAlpha(1.0f);
@@ -82,21 +78,37 @@ public class ManageChatUserCell extends FrameLayout {
             customImageView.setAlpha(0.3f);
         }
         customImageView.setOnClickListener(v -> {
+            Set<String> excludeUsers1 = GroupCallUtil.excludeSp().getStringSet(chatId + "", new HashSet<>());
+
             if (customImageView.getAlpha() == 1.0f) {
                 customImageView.setAlpha(0.3f);
-                excludeUsers.remove(user.id + "");
+                excludeUsers1.remove(user.id + "");
                 GroupCallUtil.sendCommandMessage(GroupCallUtil.UNEXCLUDE, chatId, user);
             } else {
                 customImageView.setAlpha(1.0f);
-                excludeUsers.add(user.id + "");
+                excludeUsers1.add(user.id + "");
                 GroupCallUtil.sendCommandMessage(GroupCallUtil.EXCLUDE, chatId, user);
+
+                Set<String> callingUsers = GroupCallUtil.callingSp().getStringSet(chatId + "", new HashSet<>());
+                callingUsers.removeIf(it -> it.contains(user.id + "_"));
+                GroupCallUtil.callingSp().put(chatId + "", callingUsers);
+                if (excludeListener != null)
+                    excludeListener.onExclude();
             }
-            excludeSp.put(chatId + "", excludeUsers);
+            GroupCallUtil.excludeSp().put(chatId + "", excludeUsers1);
         });
+    }
+
+    public void setExcludeListener(UnExcludeListener excludeListener) {
+        this.excludeListener = excludeListener;
     }
 
     public interface ManageChatUserCellDelegate {
         boolean onOptionsButtonCheck(ManageChatUserCell cell, boolean click);
+    }
+
+    public interface UnExcludeListener {
+        void onExclude();
     }
 
     public ManageChatUserCell(Context context, int avatarPadding, int nPadding, boolean needOption) {
@@ -142,7 +154,22 @@ public class ManageChatUserCell extends FrameLayout {
         customImageView = new ImageView(getContext());
         customImageView.setImageResource(resId);
         customImageView.setScaleType(ImageView.ScaleType.CENTER);
-//        customImageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_voipgroup_mutedIconUnscrolled), PorterDuff.Mode.MULTIPLY));
+        customImageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_voipgroup_mutedIconUnscrolled), PorterDuff.Mode.MULTIPLY));
+        addView(customImageView, LayoutHelper.createFrame(52, 64, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.TOP));
+    }
+
+    public void setInviteCustomImage(int resId) {
+        customImageView = new ImageView(getContext());
+        customImageView.setImageResource(resId);
+        customImageView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        addView(customImageView, LayoutHelper.createFrame(48, 48, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.TOP));
+    }
+
+    public void setCustomImage(int resId) {
+        customImageView = new ImageView(getContext());
+        customImageView.setImageResource(resId);
+        customImageView.setScaleType(ImageView.ScaleType.CENTER);
+        customImageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_voipgroup_mutedIconUnscrolled), PorterDuff.Mode.MULTIPLY));
         addView(customImageView, LayoutHelper.createFrame(52, 64, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.TOP));
     }
 
@@ -277,7 +304,7 @@ public class ManageChatUserCell extends FrameLayout {
                 nameTextView.setText(lastName);
             }
 
-            if(isCalling()) {
+            if (isCalling()) {
                 statusTextView.setTextColor(statusOnlineColor);
                 statusTextView.setText(LocaleController.getString("VoipGroupCalling", R.string.VoipGroupCalling));
             } else if (currrntStatus != null) {
@@ -369,14 +396,18 @@ public class ManageChatUserCell extends FrameLayout {
         }
     }
 
+    public boolean isExcluding() {
+        return customImageView.getAlpha() == 1.0f;
+    }
+
     public boolean isCalling() {
-        Set<String> callingUsers = callingSp.getStringSet(chatId + "", new HashSet<>());
+        Set<String> callingUsers = GroupCallUtil.callingSp().getStringSet(chatId + "", new HashSet<>());
         for (String value : callingUsers) {
             if (value.contains(getUserId() + "_")) {
                 long startTime = Long.parseLong(value.replace(getUserId() + "_", ""));
-                if (System.currentTimeMillis() - startTime > 90 * 1000) {
+                if (System.currentTimeMillis() - startTime > 60 * 1000) {
                     callingUsers.remove(value);
-                    callingSp.put(chatId + "", callingUsers);
+                    GroupCallUtil.callingSp().put(chatId + "", callingUsers);
                     break;
                 } else {
                     return true;

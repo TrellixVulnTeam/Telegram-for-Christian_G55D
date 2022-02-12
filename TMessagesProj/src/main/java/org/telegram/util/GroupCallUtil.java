@@ -1,6 +1,5 @@
-package org.telegram.messenger;
+package org.telegram.util;
 
-import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
@@ -10,21 +9,30 @@ import android.text.TextUtils;
 import androidx.collection.LongSparseArray;
 import androidx.core.app.NotificationManagerCompat;
 
-import com.blankj.utilcode.util.AppUtils;
 import com.blankj.utilcode.util.LogUtils;
+import com.blankj.utilcode.util.SPUtils;
 import com.blankj.utilcode.util.StringUtils;
 import com.blankj.utilcode.util.ThreadUtils;
-import com.blankj.utilcode.util.Utils;
 
+import org.telegram.messenger.AccountInstance;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.ChatObject;
+import org.telegram.messenger.ContactsController;
+import org.telegram.messenger.MessageObject;
+import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.MessagesStorage;
+import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.SendMessagesHelper;
+import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.voip.VoIPService;
 import org.telegram.tgnet.ConnectionsManager;
+import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
-import org.telegram.ui.ChatActivity;
-import org.telegram.ui.Components.voip.VoIPHelper;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class GroupCallUtil {
@@ -44,12 +52,74 @@ public class GroupCallUtil {
         return localInstance;
     }
 
+    public static SPUtils excludeSp() {
+        return SPUtils.getInstance("excludeUsers" + UserConfig.selectedAccount);
+    }
+
+    public static SPUtils callingSp() {
+        return SPUtils.getInstance("callingUsers" + UserConfig.selectedAccount);
+    }
+
+    public static void startGroupCall(TLRPC.ChatFull chatFull) {
+        Set<String> callingUsers = new HashSet<>();
+        Set<String> excludeUsers = excludeSp().getStringSet(chatFull.id + "", new HashSet<>());
+
+        for (TLRPC.ChatParticipant participant : chatFull.participants.participants) {
+            if (ChatObject.isAdmin(participant))
+                excludeUsers.add(participant.user_id + "");
+            else if (!excludeUsers.contains(participant.user_id + ""))
+                callingUsers.add(participant.user_id + "_" + System.currentTimeMillis());
+        }
+
+        excludeSp().put(chatFull.id + "", excludeUsers);
+        callingSp().put(chatFull.id + "", callingUsers);
+        if (excludeUsers.size() > 0) {
+            List<TLRPC.User> users = new ArrayList<>(excludeUsers).stream()
+                    .map(it -> getInstance().getMessagesController().getUser(Long.parseLong(it)))
+                    .collect(Collectors.toList());
+            GroupCallUtil.sendExcludeUsers(chatFull.id, users);
+        }
+        ThreadUtils.runOnUiThreadDelayed(() -> {
+            GroupCallUtil.sendCommandMessage(GroupCallUtil.INVITE_ALL, chatFull.id, null);
+        }, 5000);
+    }
+
+    public static void callUser(long chatId, long userId) {
+        Set<String> callingUsers = callingSp().getStringSet(chatId + "", new HashSet<>());
+        callingUsers.add(userId + "_" + System.currentTimeMillis());
+        callingSp().put(chatId + "", callingUsers);
+    }
+
+    private static boolean callingUsersContains(Set<String> callingUsers, long userId) {
+        for (String value : callingUsers) {
+            if (value.contains(userId + "_"))
+                return true;
+        }
+        return false;
+    }
+
+    public static void callAll(TLRPC.Chat chat, ArrayList<TLObject> participants) {
+        Set<String> callingUsers = callingSp().getStringSet(chat.id + "", new HashSet<>());
+        Set<String> excludeUsers = excludeSp().getStringSet(chat.id + "", new HashSet<>());
+        participants.stream().forEach(participant -> {
+            long userId = -1;
+            if (participant instanceof TLRPC.ChatParticipant)
+                userId = ((TLRPC.ChatParticipant) participant).user_id;
+            else if (participant instanceof TLRPC.ChannelParticipant)
+                userId = ((TLRPC.ChannelParticipant) participant).peer.user_id;
+            if (userId != -1 && !callingUsersContains(callingUsers, userId) && !excludeUsers.contains(userId + ""))
+                callingUsers.add(userId + "_" + System.currentTimeMillis());
+        });
+
+        callingSp().put(chat.id + "", callingUsers);
+    }
+
     public void processFcmCommandMessage(MessageObject messageObject) {
         try {
+            LogUtils.d("process command from fcm");
             // Only when process is killed we need fcm to trigger, other time we just use tdlib
-            if (messageObject.isFcmMessage() && !isAppRunning()
+            if (messageObject.isFcmMessage()
                     && messageObject.messageOwner instanceof TLRPC.TL_message) {
-                LogUtils.d("process command from fcm");
                 TLRPC.Message message = messageObject.messageOwner;
                 processCommandMessage(message);
             }
@@ -259,6 +329,36 @@ public class GroupCallUtil {
         }
     }
 
+    public static void sendExcludeUsers(long chatId, List<TLRPC.User> users) {
+        List<TLRPC.User> byUserName = users.stream().filter(it -> !StringUtils.isEmpty(it.username)).collect(Collectors.toList());
+        List<TLRPC.User> byFirstName = users.stream().filter(it -> StringUtils.isEmpty(it.username)).collect(Collectors.toList());
+        TLRPC.User me = getInstance().getUserConfig().getCurrentUser();
+        String myName = ContactsController.formatName(me.first_name, me.last_name);
+
+        if (!byUserName.isEmpty()) {
+            String command = TextUtils.join(" ", byUserName.stream().map(it -> "@" + it.username)
+                    .collect(Collectors.toList())) + " " + myName + " " + EXCLUDE_STR;
+            getInstance().sendMessage(command, chatId);
+            getInstance().deleteMessage(chatId, getInstance().getUserConfig().lastSendMessageId + 1);
+        }
+
+        if (!byFirstName.isEmpty()) {
+            ArrayList<TLRPC.MessageEntity> entities = new ArrayList<>();
+            for (TLRPC.User user : byFirstName) {
+                TLRPC.TL_inputMessageEntityMentionName entity = new TLRPC.TL_inputMessageEntityMentionName();
+                entity.user_id = getInstance().getMessagesController().getInputUser(user);
+                entity.offset = 0;
+                entity.length = user.first_name.length();
+                entities.add(entity);
+            }
+
+            String command = TextUtils.join(" ", byFirstName.stream().map(it -> it.first_name).collect(Collectors.toList()))
+                    + " " + myName + " " + EXCLUDE_STR;
+            getInstance().getSendMessagesHelper().sendMessage(command, -chatId, null, null, null, false, entities, null, null, true, 0, null);
+            getInstance().deleteMessage(chatId, getInstance().getUserConfig().lastSendMessageId + 1);
+        }
+    }
+
     private void deleteMessage(long chatId, int msgId) {
         getNotificationCenter().addObserver(new NotificationCenter.NotificationCenterDelegate() {
             @Override
@@ -267,7 +367,7 @@ public class GroupCallUtil {
                     int newMsgId = (int) args[1];
                     ArrayList<Integer> msgs = new ArrayList<>();
                     msgs.add(newMsgId);
-                    getMessagesController().deleteMessages(msgs, null, null, -chatId, true, false);
+                    ThreadUtils.runOnUiThreadDelayed(() -> getMessagesController().deleteMessages(msgs, null, null, -chatId, true, false), 200);
                     getNotificationCenter().removeObserver(this, NotificationCenter.messageReceivedByServer);
                 }
             }
@@ -311,35 +411,11 @@ public class GroupCallUtil {
         return AccountInstance.getInstance(UserConfig.selectedAccount).getMessagesStorage();
     }
 
-    private boolean isAppRunning() {
-        ActivityManager am = (ActivityManager) Utils.getApp().getSystemService(Context.ACTIVITY_SERVICE);
-        if (am != null) {
-            String pkgName = AppUtils.getAppPackageName();
-            List<ActivityManager.RunningTaskInfo> taskInfo = am.getRunningTasks(Integer.MAX_VALUE);
-            if (taskInfo != null && taskInfo.size() > 0) {
-                for (ActivityManager.RunningTaskInfo aInfo : taskInfo) {
-                    if (aInfo.baseActivity != null && pkgName.equals(aInfo.baseActivity.getPackageName())) {
-                        LogUtils.d(aInfo.baseActivity);
-                        return true;
-                    }
-                }
-            }
-            List<ActivityManager.RunningServiceInfo> serviceInfo = am.getRunningServices(Integer.MAX_VALUE);
-            if (serviceInfo != null && serviceInfo.size() > 0) {
-                for (ActivityManager.RunningServiceInfo aInfo : serviceInfo) {
-                    if (aInfo.service != null
-                            && !aInfo.service.getClassName().contains(GcmPushListenerService.class.getSimpleName())
-                            && pkgName.equals(aInfo.service.getPackageName())) {
-                        LogUtils.d(aInfo.service);
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
     private void doGroupCallRinging(long chatId) {
+        long lastHangup = MessagesController.getGlobalMainSettings().getLong("lastHangup", -1);
+        if (lastHangup > 0 && System.currentTimeMillis() - lastHangup < 60000)       // When user hangup, can not ring up again in 1 minite
+            return;
+
         boolean notificationsDisabled = false;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !NotificationManagerCompat.from(ApplicationLoader.applicationContext).areNotificationsEnabled()) {
             notificationsDisabled = true;

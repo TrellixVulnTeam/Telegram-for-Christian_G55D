@@ -118,7 +118,6 @@ import org.telegram.messenger.EmojiData;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.ForwardingMessagesParams;
-import org.telegram.messenger.GroupCallUtil;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.LanguageDetector;
@@ -271,7 +270,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @SuppressWarnings("unchecked")
 public class ChatActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, DialogsActivity.DialogsActivityDelegate, LocationActivity.LocationActivityDelegate, ChatAttachAlertDocumentLayout.DocumentSelectActivityDelegate {
@@ -2684,6 +2682,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             if (searchItem != null) {
                 headerItem.addSubItem(search, R.drawable.msg_search, LocaleController.getString("Search", R.string.Search), themeDelegate);
             }
+
             if (currentChat != null && !currentChat.creator && !ChatObject.hasAdminRights(currentChat)) {
                 headerItem.addSubItem(report, R.drawable.msg_report, LocaleController.getString("ReportChat", R.string.ReportChat), themeDelegate);
             }
@@ -2693,6 +2692,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             if (currentEncryptedChat != null) {
                 timeItem2 = headerItem.addSubItem(chat_enc_timer, R.drawable.msg_timer, LocaleController.getString("SetTimer", R.string.SetTimer), themeDelegate);
             }
+
             if (!ChatObject.isChannel(currentChat) || currentChat.megagroup && TextUtils.isEmpty(currentChat.username)) {
                 headerItem.addSubItem(clear_history, R.drawable.msg_clear, LocaleController.getString("ClearHistory", R.string.ClearHistory), themeDelegate);
             } else if (ChatObject.canUserDoAdminAction(currentChat, ChatObject.ACTION_DELETE_MESSAGES)) {

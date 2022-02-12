@@ -77,6 +77,7 @@ import org.telegram.ui.DialogsActivity;
 import org.telegram.ui.GroupCallActivity;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.LocationActivity;
+import org.telegram.util.TimeRecordUtil;
 
 import java.util.ArrayList;
 
@@ -648,11 +649,11 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
                 } else {
                     fragment.showDialog(new SharingLocationsAlert(getContext(), this::openSharingLocation, resourcesProvider));
                 }
-            } else if (currentStyle == 3) {
+            } else if (currentStyle == 3) {         // Have join the group call
                 if (VoIPService.getSharedInstance() != null && getContext() instanceof LaunchActivity) {
                     GroupCallActivity.create((LaunchActivity) getContext(), AccountInstance.getInstance(VoIPService.getSharedInstance().getAccount()), null, null, false, null);
                 }
-            } else if (currentStyle == 4) {
+            } else if (currentStyle == 4) {         // Haven't join the group call
                 if (fragment.getParentActivity() == null) {
                     return;
                 }
@@ -661,7 +662,9 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
                 if (call == null) {
                     return;
                 }
-                VoIPHelper.startCall(chatActivity.getMessagesController().getChat(call.chatId), null, null, false, fragment.getParentActivity(), fragment, fragment.getAccountInstance());
+                TimeRecordUtil.tempJoinCall(call, chatActivity.getMessagesController().getChat(call.chatId),
+                        v1 -> VoIPHelper.startCall(chatActivity.getMessagesController().getChat(call.chatId),
+                                null, null, false, fragment.getParentActivity(), fragment, fragment.getAccountInstance()));
             } else if (currentStyle == 5) {
                 SendMessagesHelper.ImportingHistory importingHistory = parentFragment.getSendMessagesHelper().getImportingHistory(((ChatActivity) parentFragment).getDialogId());
                 if (importingHistory == null) {
@@ -1070,8 +1073,8 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
             setTopPadding(AndroidUtilities.dp2(getStyleHeight()));
         }
 
-         speakerAmplitude = 0;
-         micAmplitude = 0;
+        speakerAmplitude = 0;
+        micAmplitude = 0;
     }
 
     @Override
@@ -2101,7 +2104,7 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
         if (service != null && (currentStyle == 1 || currentStyle == 3)) {
             int currentCallState = service.getCallState();
             if (!service.isSwitchingStream() && (currentCallState == VoIPService.STATE_WAIT_INIT || currentCallState == VoIPService.STATE_WAIT_INIT_ACK || currentCallState == VoIPService.STATE_CREATING || currentCallState == VoIPService.STATE_RECONNECTING)) {
-                titleTextView.setText(LocaleController.getString("VoipGroupConnecting", R.string. VoipGroupConnecting), false);
+                titleTextView.setText(LocaleController.getString("VoipGroupConnecting", R.string.VoipGroupConnecting), false);
             } else if (service.getChat() != null) {
                 if (service.groupCall != null && service.groupCall.call != null && !TextUtils.isEmpty(service.groupCall.call.title)) {
                     titleTextView.setText(service.groupCall.call.title, false);

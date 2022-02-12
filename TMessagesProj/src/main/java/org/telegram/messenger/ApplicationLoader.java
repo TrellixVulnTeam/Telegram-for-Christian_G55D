@@ -28,6 +28,7 @@ import android.os.SystemClock;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 
+import com.blankj.utilcode.util.CrashUtils;
 import com.blankj.utilcode.util.LogUtils;
 import com.blankj.utilcode.util.Utils;
 import com.google.android.gms.common.ConnectionResult;
@@ -216,6 +217,8 @@ public class ApplicationLoader extends Application {
         AndroidUtilities.runOnUIThread(ApplicationLoader::startPushService);
         Utils.init(this);
         LogUtils.getConfig().setLogSwitch(BuildConfig.DEBUG || BuildVars.isBetaApp());
+        if (!BuildConfig.DEBUG)
+            CrashUtils.init();
     }
 
     public static void startPushService() {
@@ -236,7 +239,7 @@ public class ApplicationLoader extends Application {
             applicationContext.stopService(new Intent(applicationContext, NotificationsService.class));
 
             PendingIntent pintent = PendingIntent.getService(applicationContext, 0, new Intent(applicationContext, NotificationsService.class), 0);
-            AlarmManager alarm = (AlarmManager)applicationContext.getSystemService(Context.ALARM_SERVICE);
+            AlarmManager alarm = (AlarmManager) applicationContext.getSystemService(Context.ALARM_SERVICE);
             alarm.cancel(pintent);
         }
     }

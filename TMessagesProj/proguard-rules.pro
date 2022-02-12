@@ -100,3 +100,10 @@
 # Use -keep to explicitly keep any other classes shrinking would remove
 -dontoptimize
 -dontobfuscate
+
+# okhttp
+-dontwarn okhttp3.internal.platform.*
+-dontwarn com.squareup.okhttp.**
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
