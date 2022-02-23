@@ -4993,4 +4993,5 @@
     <string name="TimeRecordTimestamps">Timestamps</string>
     <string name="TimeRecordLastExists">Time record exists, if you continue, it will be overwrote, are you sure to continue?</string>
     <string name="TimeRecordWriteSheetHint">Please input Google Sheet Url</string>
+    <string name="LoginEnterTestPhoneNo">You entered the test phone number, the program needs to restart in order to enter the test mode, to exit the test mode, you need to uninstall and reinstall, confirm to continue?</string>
 </resources>

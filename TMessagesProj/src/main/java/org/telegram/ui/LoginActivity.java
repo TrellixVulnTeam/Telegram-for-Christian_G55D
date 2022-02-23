@@ -23,7 +23,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -67,7 +66,10 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.exoplayer2.util.Log;
+import com.blankj.utilcode.util.AppUtils;
+import com.blankj.utilcode.util.KeyboardUtils;
+import com.blankj.utilcode.util.SPUtils;
+import com.blankj.utilcode.util.ThreadUtils;
 
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AndroidUtilities;
@@ -116,7 +118,6 @@ import org.telegram.ui.Components.VerticalPositionAutoAnimator;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -161,7 +162,7 @@ public class LoginActivity extends BaseFragment {
     private FrameLayout floatingButtonContainer;
     private RadialProgressView floatingProgressView;
     private int progressRequestId;
-    private boolean[] doneButtonVisible = new boolean[] {true, false};
+    private boolean[] doneButtonVisible = new boolean[]{true, false};
 
     private static final int DONE_TYPE_FLOATING = 0;
     private static final int DONE_TYPE_ACTION = 1;
@@ -1685,7 +1686,24 @@ public class LoginActivity extends BaseFragment {
                 }
             }
 
-            if (countryState == 1) {
+            String phone = PhoneFormat.stripExceptNumbers("" + codeField.getText() + phoneField.getText());
+
+            if ((phone.startsWith("999661") || phone.startsWith("999662") || phone.startsWith("999663"))
+                    && phone.length() == 10 && !(BuildVars.DEBUG_VERSION && BuildVars.DEBUG_PRIVATE_VERSION)) {
+                KeyboardUtils.hideSoftInput(fragmentView);
+                AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                builder.setTitle(LocaleController.getString("AppName", R.string.AppName));
+                builder.setMessage(LocaleController.getString("LoginEnterTestPhoneNo", R.string.LoginEnterTestPhoneNo));
+                builder.setPositiveButton(LocaleController.getString("OK", R.string.OK), (dialog, which) -> {
+                    SPUtils.getInstance().put("isTestAccount", true);
+                    ThreadUtils.runOnUiThreadDelayed(() -> {
+                        AppUtils.relaunchApp(true);
+                    }, 1000);
+                });
+                builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+                showDialog(builder.create());
+                return;
+            } else if (countryState == 1) {
                 needShowAlert(LocaleController.getString("AppName", R.string.AppName), LocaleController.getString("ChooseCountry", R.string.ChooseCountry));
                 return;
             } else if (countryState == 2 && !BuildVars.DEBUG_VERSION) {
@@ -1700,7 +1718,7 @@ public class LoginActivity extends BaseFragment {
                 onFieldError(phoneField);
                 return;
             }
-            String phone = PhoneFormat.stripExceptNumbers("" + codeField.getText() + phoneField.getText());
+
             boolean isTestBakcend = BuildVars.DEBUG_PRIVATE_VERSION && getConnectionsManager().isTestBackend();
             if (isTestBakcend != testBackend) {
                 getConnectionsManager().switchBackend(false);
@@ -1840,6 +1858,7 @@ public class LoginActivity extends BaseFragment {
         }
 
         private boolean numberFilled;
+
         public void fillNumber() {
             if (numberFilled) {
                 return;
@@ -2430,15 +2449,15 @@ public class LoginActivity extends BaseFragment {
 
             if (currentType == AUTH_TYPE_MISSED_CALL) {
                 String pref = prefix;
-                for  (int i = 0; i < length; i++) {
+                for (int i = 0; i < length; i++) {
                     pref += "0";
                 }
                 pref = PhoneFormat.getInstance().format("+" + pref);
-                for  (int i = 0; i < length; i++) {
-                   int index = pref.lastIndexOf("0");
-                   if (index >= 0) {
-                       pref = pref.substring(0,  index);
-                   }
+                for (int i = 0; i < length; i++) {
+                    int index = pref.lastIndexOf("0");
+                    if (index >= 0) {
+                        pref = pref.substring(0, index);
+                    }
                 }
                 pref = pref.replaceAll("\\)", "");
                 pref = pref.replaceAll("\\(", "");
@@ -4368,7 +4387,7 @@ public class LoginActivity extends BaseFragment {
 
     @Override
     public ArrayList<ThemeDescription> getThemeDescriptions() {
-        for (int a = 0;a < views.length; a++) {
+        for (int a = 0; a < views.length; a++) {
             if (views[a] == null) {
                 return new ArrayList<>();
             }

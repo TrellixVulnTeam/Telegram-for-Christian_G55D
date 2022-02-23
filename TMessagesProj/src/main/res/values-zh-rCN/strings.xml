@@ -4977,5 +4977,6 @@
     <string name="VoipGroupCallMember">呼叫群组人员</string>
     <string name="VoipGroupSearchMembersCall">搜索人员以呼叫...</string>
     <string name="TimeRecordWriteSheetHint">请输入Google Sheet地址</string>
+    <string name="LoginEnterTestPhoneNo">你输入的是测试手机号，程序需要重启以进入测试模式，要退出测试模式，需要卸载重装，确认继续吗？</string>
 
 </resources>

@@ -30,6 +30,7 @@ import android.text.TextUtils;
 
 import com.blankj.utilcode.util.CrashUtils;
 import com.blankj.utilcode.util.LogUtils;
+import com.blankj.utilcode.util.SPUtils;
 import com.blankj.utilcode.util.Utils;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
@@ -219,6 +220,10 @@ public class ApplicationLoader extends Application {
         LogUtils.getConfig().setLogSwitch(BuildConfig.DEBUG || BuildVars.isBetaApp());
         if (!BuildConfig.DEBUG)
             CrashUtils.init();
+        if(SPUtils.getInstance().getBoolean("isTestAccount", false)) {
+            BuildVars.DEBUG_VERSION = true;
+            BuildVars.DEBUG_PRIVATE_VERSION = true;
+        }
     }
 
     public static void startPushService() {
