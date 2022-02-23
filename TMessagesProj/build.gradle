@@ -20,7 +20,7 @@ easylauncher {
     }
 }
 
-configurations {E
+configurations {
     compile.exclude module: 'support-v4'
 }
 
@@ -273,7 +273,7 @@ android {
         }
     }
 
-    defaultConfig.versionCode = 2541
+    defaultConfig.versionCode = 2551
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
@@ -285,7 +285,7 @@ android {
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 30
-        versionName "8.4.4"
+        versionName "8.5.1"
 
         vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']
 

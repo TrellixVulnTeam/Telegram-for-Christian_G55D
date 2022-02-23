@@ -206,6 +206,7 @@ public class NotificationCenter {
     public static final int needSetDayNightTheme = totalEvents++;
     public static final int goingToPreviewTheme = totalEvents++;
     public static final int locationPermissionGranted = totalEvents++;
+    public static final int locationPermissionDenied = totalEvents++;
     public static final int reloadInterface = totalEvents++;
     public static final int suggestedLangpack = totalEvents++;
     public static final int didSetNewWallpapper = totalEvents++;
@@ -231,6 +232,7 @@ public class NotificationCenter {
     public static final int reactionsDidLoad = totalEvents++;
     public static final int chatAvailableReactionsUpdated = totalEvents++;
     public static final int refuseGroupCall = totalEvents++;
+    public static final int dialogsUnreadReactionsCounterChanged = totalEvents++;
 
     private SparseArray<ArrayList<NotificationCenterDelegate>> observers = new SparseArray<>();
     private SparseArray<ArrayList<NotificationCenterDelegate>> removeAfterBroadcast = new SparseArray<>();
@@ -404,7 +406,7 @@ public class NotificationCenter {
             delayedRunnablesTmp.addAll(delayedRunnables);
             delayedRunnables.clear();
             for (int a = 0; a < delayedRunnablesTmp.size(); a++) {
-                delayedRunnablesTmp.get(a).run();
+                AndroidUtilities.runOnUIThread(delayedRunnablesTmp.get(a));
             }
             delayedRunnablesTmp.clear();
         }
