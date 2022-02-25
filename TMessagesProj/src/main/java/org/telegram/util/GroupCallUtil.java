@@ -269,7 +269,10 @@ public class GroupCallUtil {
     private void sendMessage(String message, long chatId, TLRPC.User user) {
         ArrayList<TLRPC.MessageEntity> entities = new ArrayList<>();
         TLRPC.TL_inputMessageEntityMentionName entity = new TLRPC.TL_inputMessageEntityMentionName();
-        entity.user_id = getMessagesController().getInputUser(user);
+        TLRPC.InputUser inputUser = new TLRPC.TL_inputUser();
+        inputUser.user_id = user.id;
+        inputUser.access_hash = user.access_hash;
+        entity.user_id = inputUser;
         entity.offset = 0;
         entity.length = user.first_name.length();
         entities.add(entity);
@@ -413,8 +416,12 @@ public class GroupCallUtil {
 
     private void doGroupCallRinging(long chatId) {
         long lastHangup = MessagesController.getGlobalMainSettings().getLong("lastHangup", -1);
-        if (lastHangup > 0 && System.currentTimeMillis() - lastHangup < 60000)       // When user hangup, can not ring up again in 1 minite
+        if (lastHangup > 0 && System.currentTimeMillis() - lastHangup < 60000) {     // When user hangup, can not ring up again in 1 minute
+            ThreadUtils.runOnUiThread(() -> {
+                sendCommandMessage(GroupCallUtil.REFUSE_INVITE, chatId, getUserConfig().getCurrentUser());
+            });
             return;
+        }
 
         boolean notificationsDisabled = false;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !NotificationManagerCompat.from(ApplicationLoader.applicationContext).areNotificationsEnabled()) {

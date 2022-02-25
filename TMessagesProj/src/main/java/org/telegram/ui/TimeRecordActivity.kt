@@ -96,6 +96,7 @@ class TimeRecordActivity(bundle: Bundle) : BaseFragment(bundle),
                         "TimeRecordWriteSheetHint",
                         R.string.TimeRecordWriteSheetHint
                     )
+                    editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextHint))
                     editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack))
                     editText.setBackgroundDrawable(Theme.createEditTextDrawable(context, false))
                     linearLayout.addView(editText, MATCH_PARENT, WRAP_CONTENT)

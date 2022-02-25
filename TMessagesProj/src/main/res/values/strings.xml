@@ -3696,9 +3696,9 @@
     <string name="VoipGroupSearchMembers">Search members to invite...</string>
     <string name="VoipGroupCalling">Calling...</string>
     <string name="VoipGroupCallMember">Call Members</string>
+    <string name="VoipGroupCallAll">Call All</string>
     <string name="VoipGroupSearchMembersCall">Search members to call...</string>
     <string name="VoipGroupCopyInviteLink">Copy Invite Link</string>
-    <string name="VoipGroupCallAll">Call All</string>
     <string name="VoipGroupCopyInviteLinkCopied">Invite link copied to clipboard.</string>
     <string name="VoipGroupUnmute">Unmute</string>
     <string name="VoipGroupAddMemberTitle">Add Member</string>

@@ -345,6 +345,16 @@ public class LocaleController {
         languagesDict.put(localeInfo.shortName, localeInfo);
 
         localeInfo = new LocaleInfo();
+        localeInfo.name = "ភាសាខ្មែរ";
+        localeInfo.nameEnglish = "Khmer";
+        localeInfo.pluralLangCode = "km";
+        localeInfo.shortName = "km";
+        localeInfo.pathToFile = null;
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);
+
+        localeInfo = new LocaleInfo();
         localeInfo.name = "Italiano";
         localeInfo.nameEnglish = "Italian";
         localeInfo.shortName = localeInfo.pluralLangCode = "it";

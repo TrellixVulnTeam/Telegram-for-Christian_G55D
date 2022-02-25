@@ -722,15 +722,15 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             selectedBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             selectedBarPaint.setColor(0xffffffff);
 
-            topOverlayGradient = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] {0x42000000, 0});
+            topOverlayGradient = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x42000000, 0});
             topOverlayGradient.setShape(GradientDrawable.RECTANGLE);
 
-            bottomOverlayGradient = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, new int[] {0x42000000, 0});
+            bottomOverlayGradient = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0x42000000, 0});
             bottomOverlayGradient.setShape(GradientDrawable.RECTANGLE);
 
             for (int i = 0; i < 2; i++) {
                 final GradientDrawable.Orientation orientation = i == 0 ? GradientDrawable.Orientation.LEFT_RIGHT : GradientDrawable.Orientation.RIGHT_LEFT;
-                pressedOverlayGradient[i] = new GradientDrawable(orientation, new int[] {0x32000000, 0});
+                pressedOverlayGradient[i] = new GradientDrawable(orientation, new int[]{0x32000000, 0});
                 pressedOverlayGradient[i].setShape(GradientDrawable.RECTANGLE);
             }
 
@@ -1621,7 +1621,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             scrimPopupWindow.showAtLocation(fragmentView, Gravity.LEFT | Gravity.TOP, finalPopupX, finalPopupY);
             try {
                 actionBar.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
-            } catch (Exception ignore) {}
+            } catch (Exception ignore) {
+            }
             dimBehindView(backButton, 0.3f);
             if (undoView != null) {
                 undoView.hide(true, 1);
@@ -2191,7 +2192,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         layoutParams.topMargin = actionBarHeight;
                     }
                 }
-                
+
                 int height = MeasureSpec.getSize(heightMeasureSpec);
                 super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
 
@@ -2580,7 +2581,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
             @Override
             public boolean drawChild(Canvas canvas, View child, long drawingTime) {
-                if (getItemAnimator().isRunning() && child.getBackground() == null  && child.getTranslationY() != 0) {
+                if (getItemAnimator().isRunning() && child.getBackground() == null && child.getTranslationY() != 0) {
                     boolean useAlpha = listView.getChildAdapterPosition(child) == sharedMediaRow && child.getAlpha() != 1f;
                     if (useAlpha) {
                         whitePaint.setAlpha((int) (255 * listView.getAlpha() * child.getAlpha()));
@@ -3148,7 +3149,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (transitionOnlineText != null) {
                     canvas.save();
                     canvas.translate(onlineTextView[0].getX(), onlineTextView[0].getY());
-                    canvas.saveLayerAlpha(0 ,0, transitionOnlineText.getMeasuredWidth(), transitionOnlineText.getMeasuredHeight(), (int) (255 * (1f - animationProgress)), Canvas.ALL_SAVE_FLAG);
+                    canvas.saveLayerAlpha(0, 0, transitionOnlineText.getMeasuredWidth(), transitionOnlineText.getMeasuredHeight(), (int) (255 * (1f - animationProgress)), Canvas.ALL_SAVE_FLAG);
                     transitionOnlineText.draw(canvas);
                     canvas.restore();
                     canvas.restore();
@@ -3218,6 +3219,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         avatarProgressView = new RadialProgressView(context) {
             private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
             {
                 paint.setColor(0x55000000);
             }
@@ -3513,6 +3515,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         pinchToZoomHelper = new PinchToZoomHelper(decorView, frameLayout) {
 
             Paint statusBarPaint;
+
             @Override
             protected void invalidateViews() {
                 super.invalidateViews();
@@ -5112,7 +5115,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
         invalidateIsInLandscapeMode();
         if (listAdapter != null) {
-           // saveScrollPosition();
+            // saveScrollPosition();
             firstLayout = true;
             listAdapter.notifyDataSetChanged();
         }
@@ -6346,6 +6349,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
         } else if (chatId != 0) {
             TLRPC.Chat chat = getMessagesController().getChat(chatId);
+            if (ChatObject.canManageCalls(chat))
+                otherItem.addSubItem(time_record, R.drawable.msg_timer, LocaleController.getString("TimeRecord", R.string.TimeRecord));
             hasVoiceChatItem = false;
             if (ChatObject.isChannel(chat)) {
                 if (ChatObject.hasAdminRights(chat) || chat.megagroup && ChatObject.canChangeChatInfo(chat)) {
@@ -8217,14 +8222,18 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         scrimView = view;
         dimBehindView(enable);
     }
+
     private void dimBehindView(View view, float value) {
         scrimView = view;
         dimBehindView(value);
     }
+
     private void dimBehindView(boolean enable) {
         dimBehindView(enable ? 0.2f : 0);
     }
+
     private AnimatorSet scrimAnimatorSet = null;
+
     private void dimBehindView(float value) {
         boolean enable = value > 0;
         fragmentView.invalidate();
@@ -8498,7 +8507,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     0, 0);
             combinedDrawable.setIconSize(AndroidUtilities.dp(56), AndroidUtilities.dp(56));
             writeButton.setBackground(combinedDrawable);
-        } catch (Exception e) {}
+        } catch (Exception e) {
+        }
     }
 
     private boolean isQrNeedVisible() {
