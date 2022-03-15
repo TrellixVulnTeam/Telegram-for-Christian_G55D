@@ -67,7 +67,10 @@ public class GroupCallUtil {
         for (TLRPC.ChatParticipant participant : chatFull.participants.participants) {
             if (ChatObject.isAdmin(participant))
                 excludeUsers.add(participant.user_id + "");
-            else if (!excludeUsers.contains(participant.user_id + ""))
+        }
+
+        for (TLRPC.ChatParticipant participant : chatFull.participants.participants) {
+            if (!excludeUsers.contains(participant.user_id + ""))
                 callingUsers.add(participant.user_id + "_" + System.currentTimeMillis());
         }
 

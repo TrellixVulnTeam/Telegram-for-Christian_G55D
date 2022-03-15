@@ -20,6 +20,8 @@ import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.util.Xml;
 
+import com.blankj.utilcode.util.LogUtils;
+
 import org.telegram.messenger.time.FastDateFormat;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLObject;
@@ -355,6 +357,16 @@ public class LocaleController {
         languagesDict.put(localeInfo.shortName, localeInfo);
 
         localeInfo = new LocaleInfo();
+        localeInfo.name = "Filipino";
+        localeInfo.nameEnglish = "Filipino";
+        localeInfo.pluralLangCode = "tl";
+        localeInfo.shortName = "tl_ph";
+        localeInfo.pathToFile = null;
+        localeInfo.builtIn = true;
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.shortName, localeInfo);
+
+        localeInfo = new LocaleInfo();
         localeInfo.name = "Italiano";
         localeInfo.nameEnglish = "Italian";
         localeInfo.shortName = localeInfo.pluralLangCode = "it";
@@ -464,8 +476,12 @@ public class LocaleController {
                 }
             }
 
-            if (currentInfo == null && systemDefaultLocale.getLanguage() != null) {
-                currentInfo = getLanguageFromDict(systemDefaultLocale.getLanguage());
+            String systemLang = systemDefaultLocale.getLanguage();
+            if ("fil".equals(systemLang) || "tl".equals(systemLang))
+                systemLang = "tl_ph";
+
+            if (currentInfo == null && systemLang != null) {
+                currentInfo = getLanguageFromDict(systemLang);
             }
             if (currentInfo == null) {
                 currentInfo = getLanguageFromDict(getLocaleString(systemDefaultLocale));
@@ -495,6 +511,7 @@ public class LocaleController {
         }
         return languagesDict.get(key.toLowerCase().replace("-", "_"));
     }
+
     public LocaleInfo getBuiltinLanguageByPlural(String plural) {
         Collection<LocaleInfo> values = languagesDict.values();
         for (LocaleInfo l : values)
