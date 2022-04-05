@@ -98,6 +98,9 @@ public class MessageObject {
     public long reactionsLastCheckTime;
     public String customName;
     public boolean reactionsChanged;
+    public boolean isReactionPush;
+    public boolean putInDownloadsStore;
+    public boolean isDownloadingFile;
     private int isRoundVideoCached;
     public long eventId;
     public int contentType;
@@ -442,6 +445,9 @@ public class MessageObject {
         public boolean edge;
         public int flags;
         public float[] siblingHeights;
+
+        public float top; // sum of ph of media above
+        public float left; // sum of pw of media on the left side
 
         public void set(int minX, int maxX, int minY, int maxY, int w, float h, int flags) {
             this.minX = (byte) minX;
@@ -1018,7 +1024,7 @@ public class MessageObject {
             messageText = Emoji.replaceEmoji(messageText, paint.getFontMetricsInt(), AndroidUtilities.dp(20), false, emojiOnly);
             checkEmojiOnly(emojiOnly);
             emojiAnimatedSticker = null;
-            if (emojiOnlyCount == 1 && !(message.media instanceof TLRPC.TL_messageMediaWebPage) && !(message.media instanceof TLRPC.TL_messageMediaInvoice) && message.entities.isEmpty()) {
+            if (emojiOnlyCount == 1 && !(message.media instanceof TLRPC.TL_messageMediaWebPage) && !(message.media instanceof TLRPC.TL_messageMediaInvoice) && message.entities.isEmpty() && (message.media instanceof TLRPC.TL_messageMediaEmpty || message.media == null) && messageOwner.grouped_id == 0) {
                 CharSequence emoji = messageText;
                 int index;
                 if ((index = TextUtils.indexOf(emoji, "\uD83C\uDFFB")) >= 0) {
@@ -5057,7 +5063,7 @@ public class MessageObject {
     }
 
     public static boolean canAutoplayAnimatedSticker(TLRPC.Document document) {
-        return isAnimatedStickerDocument(document, true) && SharedConfig.getDevicePerformanceClass() != SharedConfig.PERFORMANCE_CLASS_LOW;
+        return (isAnimatedStickerDocument(document, true) || isVideoStickerDocument(document)) && SharedConfig.getDevicePerformanceClass() != SharedConfig.PERFORMANCE_CLASS_LOW;
     }
 
     public static boolean isMaskDocument(TLRPC.Document document) {
@@ -6153,6 +6159,8 @@ public class MessageObject {
 
     public void setQuery(String query) {
         if (TextUtils.isEmpty(query)) {
+            highlightedWords = null;
+            messageTrimmedToHighlight = null;
             return;
         }
         ArrayList<String> foundWords = new ArrayList<>();
@@ -6318,7 +6326,7 @@ public class MessageObject {
         return !isEditing() && !isSponsored() && isSent() && messageOwner.action == null;
     }
 
-    public boolean selectReaction(String reaction, boolean fromDoubleTap) {
+    public boolean selectReaction(String reaction, boolean big, boolean fromDoubleTap) {
         if (messageOwner.reactions == null) {
             messageOwner.reactions = new TLRPC.TL_messageReactions();
             messageOwner.reactions.can_see_list = isFromGroup() || isFromUser();
@@ -6333,6 +6341,10 @@ public class MessageObject {
             if (messageOwner.reactions.results.get(i).reaction.equals(reaction)) {
                 newReaction = messageOwner.reactions.results.get(i);
             }
+        }
+
+        if (choosenReaction != null && choosenReaction == newReaction && big) {
+            return true;
         }
 
         if (choosenReaction != null && (choosenReaction == newReaction || fromDoubleTap)) {

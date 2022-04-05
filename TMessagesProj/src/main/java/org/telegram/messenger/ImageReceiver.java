@@ -418,6 +418,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             currentExt = ext;
             currentParentObject = null;
             currentCacheType = 0;
+            roundPaint.setShader(null);
             staticThumbDrawable = thumb;
             currentAlpha = 1.0f;
             previousAlpha = 1f;
@@ -573,6 +574,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         mediaShader = null;
         legacyShader = null;
         legacyCanvas = null;
+        roundPaint.setShader(null);
         if (legacyBitmap != null) {
             legacyBitmap.recycle();
             legacyBitmap = null;
@@ -583,6 +585,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         if (staticThumbDrawable instanceof SvgHelper.SvgDrawable) {
             ((SvgHelper.SvgDrawable) staticThumbDrawable).setParent(this);
         }
+        updateDrawableRadius(staticThumbDrawable);
 
         if (delegate != null) {
             delegate.didSetImage(this, currentImageDrawable != null || currentThumbDrawable != null || staticThumbDrawable != null || currentMediaDrawable != null, currentImageDrawable == null && currentMediaDrawable == null, false);
@@ -721,6 +724,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             fileDrawable.setAllowDecodeSingleFrame(true);
         }
         thumbShader = null;
+        roundPaint.setShader(null);
         staticThumbDrawable = bitmap;
         updateDrawableRadius(bitmap);
         currentMediaLocation = null;
@@ -865,6 +869,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         if (staticThumbDrawable != null) {
             staticThumbDrawable = null;
             thumbShader = null;
+            roundPaint.setShader(null);
         }
         clearImage();
         if (isPressed == 0) {
@@ -1004,9 +1009,6 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                 } else {
                     bitmapW = bitmapDrawable.getIntrinsicWidth();
                     bitmapH = bitmapDrawable.getIntrinsicHeight();
-                }
-                if (parentView != null) {
-                    parentView.invalidate();
                 }
             } else {
                 Bitmap bitmap = bitmapDrawable.getBitmap();
@@ -1898,8 +1900,8 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         setRoundRadius(new int[]{value, value, value, value});
     }
 
-    public void setRoundRadius(int tl, int tr, int bl, int br) {
-        setRoundRadius(new int[]{tl, tr, bl, br});
+    public void setRoundRadius(int tl, int tr, int br, int bl) {
+        setRoundRadius(new int[]{tl, tr, br, bl});
     }
 
     public void setRoundRadius(int[] value) {
@@ -2408,6 +2410,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         currentThumbKey = null;
         currentThumbDrawable = null;
         thumbShader = null;
+        roundPaint.setShader(null);
         staticThumbDrawable = new BitmapDrawable(null, thumb);
         crossfadeWithThumb = true;
         currentAlpha = 0f;

@@ -256,12 +256,14 @@ public class MediaDataController extends BaseController {
         loaded = false;
         hints.clear();
         inlineBots.clear();
-        getNotificationCenter().postNotificationName(NotificationCenter.reloadHints);
-        getNotificationCenter().postNotificationName(NotificationCenter.reloadInlineHints);
+        AndroidUtilities.runOnUIThread(() -> {
+            getNotificationCenter().postNotificationName(NotificationCenter.reloadHints);
+            getNotificationCenter().postNotificationName(NotificationCenter.reloadInlineHints);
+        });
 
         drafts.clear();
         draftMessages.clear();
-        draftPreferences.edit().clear().commit();
+        draftPreferences.edit().clear().apply();
 
         botInfos.clear();
         botKeyboards.clear();
@@ -388,6 +390,7 @@ public class MediaDataController extends BaseController {
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             try {
                 if (reactionsFinal != null) {
+                    getMessagesStorage().getDatabase().executeFast("DELETE FROM reactions").stepThis().dispose();
                     SQLitePreparedStatement state = getMessagesStorage().getDatabase().executeFast("REPLACE INTO reactions VALUES(?, ?, ?)");
                     state.requery();
                     int size = 4; // Integer.BYTES
@@ -4917,15 +4920,11 @@ public class MediaDataController extends BaseController {
         Matcher m = pattern.matcher(cs);
         int offset = 0;
         while (m.find()) {
-            if (checkInclusion(m.start(), entities, false) || checkIntersection(m.start(), m.end(), entities)) {
-
-            }
-
             String gr = m.group(1);
             cs = cs.subSequence(0, m.start() - offset) + gr + cs.subSequence(m.end() - offset, cs.length());
 
             TLRPC.MessageEntity entity = entityProvider.provide(null);
-            entity.offset = m.start() + offset;
+            entity.offset = m.start() - offset;
             entity.length = gr.length();
             entities.add(entity);
 

@@ -86,6 +86,10 @@ import com.blankj.utilcode.util.LogUtils;
 import com.blankj.utilcode.util.NotificationUtils;
 import com.blankj.utilcode.util.ThreadUtils;
 
+import androidx.annotation.Nullable;
+
+import com.google.android.exoplayer2.util.Log;
+
 import org.json.JSONObject;
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
@@ -99,6 +103,7 @@ import org.telegram.messenger.FileLog;
 import org.telegram.util.GroupCallUtil;
 import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
@@ -112,6 +117,7 @@ import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.XiaomiUtilities;
 import org.telegram.tgnet.ConnectionsManager;
+import org.telegram.tgnet.RequestDelegate;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.BottomSheet;
@@ -837,7 +843,9 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
         return START_NOT_STICKY;
     }
 
-    public static VoIPService getSharedInstance() {
+    public static boolean hasRtmpStream() {
+		return getSharedInstance() != null && getSharedInstance().groupCall != null && getSharedInstance().groupCall.call.rtmp_stream;
+	}public static VoIPService getSharedInstance() {
         return sharedInstance;
     }
 
@@ -1468,44 +1476,43 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
         }
     }
 
-    public void onGroupCallUpdated(TLRPC.GroupCall call) {
-        if (chat == null) {
-            return;
-        }
-
-        if (groupCall == null || groupCall.call.id != call.id) {
-            return;
-        }
-        if (groupCall.call instanceof TLRPC.TL_groupCallDiscarded) {
-            hangUp(2);
-            return;
-        }
-        boolean newModeStreaming = false;
-        if (myParams != null) {
-            try {
-                JSONObject object = new JSONObject(myParams.data);
-                newModeStreaming = object.optBoolean("stream");
-            } catch (Exception e) {
-                FileLog.e(e);
-            }
-        }
-        if ((currentState == STATE_WAIT_INIT || newModeStreaming != currentGroupModeStreaming) && myParams != null) {
-            if (playedConnectedSound && newModeStreaming != currentGroupModeStreaming) {
-                switchingStream = true;
-            }
-            currentGroupModeStreaming = newModeStreaming;
-            try {
-                if (newModeStreaming) {
-                    tgVoip[CAPTURE_DEVICE_CAMERA].prepareForStream();
-                } else {
-                    tgVoip[CAPTURE_DEVICE_CAMERA].setJoinResponsePayload(myParams.data);
-                }
-                dispatchStateChanged(STATE_WAIT_INIT_ACK);
-            } catch (Exception e) {
-                FileLog.e(e);
-            }
-        }
-    }
+	public void onGroupCallUpdated(TLRPC.GroupCall call) {
+		if (chat == null) {
+			return;
+		}
+		if (groupCall == null || groupCall.call.id != call.id) {
+			return;
+		}
+		if (groupCall.call instanceof TLRPC.TL_groupCallDiscarded) {
+			hangUp(2);
+			return;
+		}
+		boolean newModeStreaming = false;
+		if (myParams != null) {
+			try {
+				JSONObject object = new JSONObject(myParams.data);
+				newModeStreaming = object.optBoolean("stream");
+			} catch (Exception e) {
+				FileLog.e(e);
+			}
+		}
+		if ((currentState == STATE_WAIT_INIT || newModeStreaming != currentGroupModeStreaming) && myParams != null) {
+			if (playedConnectedSound && newModeStreaming != currentGroupModeStreaming) {
+				switchingStream = true;
+			}
+			currentGroupModeStreaming = newModeStreaming;
+			try {
+				if (newModeStreaming) {
+					tgVoip[CAPTURE_DEVICE_CAMERA].prepareForStream(groupCall.call != null && groupCall.call.rtmp_stream);
+				} else {
+					tgVoip[CAPTURE_DEVICE_CAMERA].setJoinResponsePayload(myParams.data);
+				}
+				dispatchStateChanged(STATE_WAIT_INIT_ACK);
+			} catch (Exception e) {
+				FileLog.e(e);
+			}
+		}
+	}
 
     public void onCallUpdated(TLRPC.PhoneCall phoneCall) {
         if (user == null) {
@@ -1976,59 +1983,59 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
     private Runnable shortPollRunnable;
     private int checkRequestId;
 
-    private void startGroupCheckShortpoll() {
-        if (shortPollRunnable != null || sharedInstance == null || groupCall == null || mySource[CAPTURE_DEVICE_CAMERA] == 0 && mySource[CAPTURE_DEVICE_SCREEN] == 0) {
-            return;
-        }
-        AndroidUtilities.runOnUIThread(shortPollRunnable = () -> {
-            if (shortPollRunnable == null || sharedInstance == null || groupCall == null || mySource[CAPTURE_DEVICE_CAMERA] == 0 && mySource[CAPTURE_DEVICE_SCREEN] == 0) {
-                return;
-            }
-            TLRPC.TL_phone_checkGroupCall req = new TLRPC.TL_phone_checkGroupCall();
-            req.call = groupCall.getInputGroupCall();
-            for (int a = 0; a < mySource.length; a++) {
-                if (mySource[a] != 0) {
-                    req.sources.add(mySource[a]);
-                }
-            }
-            checkRequestId = ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-                if (shortPollRunnable == null || sharedInstance == null || groupCall == null) {
-                    return;
-                }
-                shortPollRunnable = null;
-                checkRequestId = 0;
-                boolean recreateCamera = false;
-                boolean recreateScreenCapture = false;
-                if (response instanceof TLRPC.Vector) {
-                    TLRPC.Vector vector = (TLRPC.Vector) response;
-                    if (mySource[CAPTURE_DEVICE_CAMERA] != 0 && req.sources.contains(mySource[CAPTURE_DEVICE_CAMERA])) {
-                        if (!vector.objects.contains(mySource[CAPTURE_DEVICE_CAMERA])) {
-                            recreateCamera = true;
-                        }
-                    }
-                    if (mySource[CAPTURE_DEVICE_SCREEN] != 0 && req.sources.contains(mySource[CAPTURE_DEVICE_SCREEN])) {
-                        if (!vector.objects.contains(mySource[CAPTURE_DEVICE_SCREEN])) {
-                            recreateScreenCapture = true;
-                        }
-                    }
-                } else if (error != null && error.code == 400) {
-                    recreateCamera = true;
-                    if (mySource[CAPTURE_DEVICE_SCREEN] != 0 && req.sources.contains(mySource[CAPTURE_DEVICE_SCREEN])) {
-                        recreateScreenCapture = true;
-                    }
-                }
-                if (recreateCamera) {
-                    createGroupInstance(CAPTURE_DEVICE_CAMERA, false);
-                }
-                if (recreateScreenCapture) {
-                    createGroupInstance(CAPTURE_DEVICE_SCREEN, false);
-                }
-                if (mySource[CAPTURE_DEVICE_SCREEN] != 0 || mySource[CAPTURE_DEVICE_CAMERA] != 0) {
-                    startGroupCheckShortpoll();
-                }
-            }));
-        }, 4000);
-    }
+	private void startGroupCheckShortpoll() {
+		if (shortPollRunnable != null || sharedInstance == null || groupCall == null || (mySource[CAPTURE_DEVICE_CAMERA] == 0 && mySource[CAPTURE_DEVICE_SCREEN] == 0 && !(groupCall.call != null && groupCall.call.rtmp_stream))) {
+			return;
+		}
+		AndroidUtilities.runOnUIThread(shortPollRunnable = () -> {
+			if (shortPollRunnable == null || sharedInstance == null || groupCall == null || (mySource[CAPTURE_DEVICE_CAMERA] == 0 && mySource[CAPTURE_DEVICE_SCREEN] == 0 && !(groupCall.call != null && groupCall.call.rtmp_stream))) {
+				return;
+			}
+			TLRPC.TL_phone_checkGroupCall req = new TLRPC.TL_phone_checkGroupCall();
+			req.call = groupCall.getInputGroupCall();
+			for (int a = 0; a < mySource.length; a++) {
+				if (mySource[a] != 0) {
+					req.sources.add(mySource[a]);
+				}
+			}
+			checkRequestId = ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+				if (shortPollRunnable == null || sharedInstance == null || groupCall == null) {
+					return;
+				}
+				shortPollRunnable = null;
+				checkRequestId = 0;
+				boolean recreateCamera = false;
+				boolean recreateScreenCapture = false;
+				if (response instanceof TLRPC.Vector) {
+					TLRPC.Vector vector = (TLRPC.Vector) response;
+					if (mySource[CAPTURE_DEVICE_CAMERA] != 0 && req.sources.contains(mySource[CAPTURE_DEVICE_CAMERA])) {
+						if (!vector.objects.contains(mySource[CAPTURE_DEVICE_CAMERA])) {
+							recreateCamera = true;
+						}
+					}
+					if (mySource[CAPTURE_DEVICE_SCREEN] != 0 && req.sources.contains(mySource[CAPTURE_DEVICE_SCREEN])) {
+						if (!vector.objects.contains(mySource[CAPTURE_DEVICE_SCREEN])) {
+							recreateScreenCapture = true;
+						}
+					}
+				} else if (error != null && error.code == 400) {
+					recreateCamera = true;
+					if (mySource[CAPTURE_DEVICE_SCREEN] != 0 && req.sources.contains(mySource[CAPTURE_DEVICE_SCREEN])) {
+						recreateScreenCapture = true;
+					}
+				}
+				if (recreateCamera) {
+					createGroupInstance(CAPTURE_DEVICE_CAMERA, false);
+				}
+				if (recreateScreenCapture) {
+					createGroupInstance(CAPTURE_DEVICE_SCREEN, false);
+				}
+				if (mySource[CAPTURE_DEVICE_SCREEN] != 0 || mySource[CAPTURE_DEVICE_CAMERA] != 0 || (groupCall.call != null && groupCall.call.rtmp_stream)) {
+					startGroupCheckShortpoll();
+				}
+			}));
+		}, 4000);
+	}
 
     private void cancelGroupCheckShortPoll() {
         if (mySource[CAPTURE_DEVICE_SCREEN] != 0 || mySource[CAPTURE_DEVICE_CAMERA] != 0) {
@@ -2135,95 +2142,126 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
                             req.peer = MessagesController.getInputPeer(chat);
                             ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> {
 
-                            });
-                        }
-                        NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.webRtcMicAmplitudeEvent, levels[a]);
-                        continue;
-                    }
-                    hasOther = true;
-                    maxAmplitude = Math.max(maxAmplitude, levels[a]);
-                }
-                if (hasOther) {
-                    NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.webRtcSpeakerAmplitudeEvent, maxAmplitude);
-                    if (audioLevelsCallback != null) {
-                        audioLevelsCallback.run(uids, levels, voice);
-                    }
-                }
-            }, (taskPtr, unknown) -> {
-                if (sharedInstance == null || groupCall == null || type != CAPTURE_DEVICE_CAMERA) {
-                    return;
-                }
-                groupCall.processUnknownVideoParticipants(unknown, (ssrcs) -> {
-                    if (sharedInstance == null || groupCall == null) {
-                        return;
-                    }
-                    broadcastUnknownParticipants(taskPtr, unknown);
-                });
-            }, (timestamp, duration, videoChannel, quality) -> {
-                if (type != CAPTURE_DEVICE_CAMERA) {
-                    return;
-                }
-                TLRPC.TL_upload_getFile req = new TLRPC.TL_upload_getFile();
-                req.limit = 128 * 1024;
-                TLRPC.TL_inputGroupCallStream inputGroupCallStream = new TLRPC.TL_inputGroupCallStream();
-                inputGroupCallStream.call = groupCall.getInputGroupCall();
-                inputGroupCallStream.time_ms = timestamp;
-                if (duration == 500) {
-                    inputGroupCallStream.scale = 1;
-                }
-                if (videoChannel != 0) {
-                    inputGroupCallStream.flags |= 1;
-                    inputGroupCallStream.video_channel = videoChannel;
-                    inputGroupCallStream.video_quality = quality;
-                }
-                req.location = inputGroupCallStream;
-                String key = videoChannel == 0 ? ("" + timestamp) : (videoChannel + "_" + timestamp + "_" + quality);
-                int reqId = AccountInstance.getInstance(currentAccount).getConnectionsManager().sendRequest(req, (response, error, responseTime) -> {
-                    AndroidUtilities.runOnUIThread(() -> currentStreamRequestTimestamp.remove(key));
-                    if (tgVoip[type] == null) {
-                        return;
-                    }
-                    if (response != null) {
-                        TLRPC.TL_upload_file res = (TLRPC.TL_upload_file) response;
-                        tgVoip[type].onStreamPartAvailable(timestamp, res.bytes.buffer, res.bytes.limit(), responseTime, videoChannel, quality);
-                    } else {
-                        if ("GROUPCALL_JOIN_MISSING".equals(error.text)) {
-                            AndroidUtilities.runOnUIThread(() -> createGroupInstance(type, false));
-                        } else {
-                            int status;
-                            if ("TIME_TOO_BIG".equals(error.text) || error.text.startsWith("FLOOD_WAIT")) {
-                                status = 0;
-                            } else {
-                                status = -1;
-                            }
-                            tgVoip[type].onStreamPartAvailable(timestamp, null, status, responseTime, videoChannel, quality);
-                        }
-                    }
-                }, ConnectionsManager.RequestFlagFailOnServerErrors, ConnectionsManager.ConnectionTypeDownload, groupCall.call.stream_dc_id);
-                AndroidUtilities.runOnUIThread(() -> currentStreamRequestTimestamp.put(key, reqId));
-            }, (timestamp, duration, videoChannel, quality) -> {
-                if (type != CAPTURE_DEVICE_CAMERA) {
-                    return;
-                }
-                AndroidUtilities.runOnUIThread(() -> {
-                    String key = videoChannel == 0 ? ("" + timestamp) : (videoChannel + "_" + timestamp + "_" + quality);
-                    Integer reqId = currentStreamRequestTimestamp.get(key);
-                    if (reqId != null) {
-                        AccountInstance.getInstance(currentAccount).getConnectionsManager().cancelRequest(reqId, true);
-                        currentStreamRequestTimestamp.remove(key);
-                    }
-                });
-            });
-            tgVoip[type].setOnStateUpdatedListener((state, inTransition) -> updateConnectionState(type, state, inTransition));
-        }
-        tgVoip[type].resetGroupInstance(!created, false);
-        if (captureDevice[type] != 0) {
-            destroyCaptureDevice[type] = false;
-        }
-        if (type == CAPTURE_DEVICE_CAMERA) {
-            dispatchStateChanged(STATE_WAIT_INIT);
-        }
-    }
+							});
+						}
+						NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.webRtcMicAmplitudeEvent, levels[a]);
+						continue;
+					}
+					hasOther = true;
+					maxAmplitude = Math.max(maxAmplitude, levels[a]);
+				}
+				if (hasOther) {
+					NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.webRtcSpeakerAmplitudeEvent, maxAmplitude);
+					if (audioLevelsCallback != null) {
+						audioLevelsCallback.run(uids, levels, voice);
+					}
+				}
+			}, (taskPtr, unknown) -> {
+				if (sharedInstance == null || groupCall == null || type != CAPTURE_DEVICE_CAMERA) {
+					return;
+				}
+				groupCall.processUnknownVideoParticipants(unknown, (ssrcs) -> {
+					if (sharedInstance == null || groupCall == null) {
+						return;
+					}
+					broadcastUnknownParticipants(taskPtr, unknown);
+				});
+			}, (timestamp, duration, videoChannel, quality) -> {
+				if (type != CAPTURE_DEVICE_CAMERA) {
+					return;
+				}
+				TLRPC.TL_upload_getFile req = new TLRPC.TL_upload_getFile();
+				req.limit = 128 * 1024;
+				TLRPC.TL_inputGroupCallStream inputGroupCallStream = new TLRPC.TL_inputGroupCallStream();
+				inputGroupCallStream.call = groupCall.getInputGroupCall();
+				inputGroupCallStream.time_ms = timestamp;
+				if (duration == 500) {
+					inputGroupCallStream.scale = 1;
+				}
+				if (videoChannel != 0) {
+					inputGroupCallStream.flags |= 1;
+					inputGroupCallStream.video_channel = videoChannel;
+					inputGroupCallStream.video_quality = quality;
+				}
+				req.location = inputGroupCallStream;
+				String key = videoChannel == 0 ? ("" + timestamp) : (videoChannel + "_" + timestamp + "_" + quality);
+				int reqId = AccountInstance.getInstance(currentAccount).getConnectionsManager().sendRequest(req, (response, error, responseTime) -> {
+					AndroidUtilities.runOnUIThread(() -> currentStreamRequestTimestamp.remove(key));
+					if (tgVoip[type] == null) {
+						return;
+					}
+					if (response != null) {
+						TLRPC.TL_upload_file res = (TLRPC.TL_upload_file) response;
+						tgVoip[type].onStreamPartAvailable(timestamp, res.bytes.buffer, res.bytes.limit(), responseTime, videoChannel, quality);
+					} else {
+						if ("GROUPCALL_JOIN_MISSING".equals(error.text)) {
+							AndroidUtilities.runOnUIThread(() -> createGroupInstance(type, false));
+						} else {
+							int status;
+							if ("TIME_TOO_BIG".equals(error.text) || error.text.startsWith("FLOOD_WAIT")) {
+								status = 0;
+							} else {
+								status = -1;
+							}
+							tgVoip[type].onStreamPartAvailable(timestamp, null, status, responseTime, videoChannel, quality);
+						}
+					}
+				}, ConnectionsManager.RequestFlagFailOnServerErrors, ConnectionsManager.ConnectionTypeDownload, groupCall.call.stream_dc_id);
+				AndroidUtilities.runOnUIThread(() -> currentStreamRequestTimestamp.put(key, reqId));
+			}, (timestamp, duration, videoChannel, quality) -> {
+				if (type != CAPTURE_DEVICE_CAMERA) {
+					return;
+				}
+				AndroidUtilities.runOnUIThread(() -> {
+					String key = videoChannel == 0 ? ("" + timestamp) : (videoChannel + "_" + timestamp + "_" + quality);
+					Integer reqId = currentStreamRequestTimestamp.get(key);
+					if (reqId != null) {
+						AccountInstance.getInstance(currentAccount).getConnectionsManager().cancelRequest(reqId, true);
+						currentStreamRequestTimestamp.remove(key);
+					}
+				});
+			}, taskPtr -> {
+				if (groupCall != null && groupCall.call != null && groupCall.call.rtmp_stream) {
+					TLRPC.TL_phone_getGroupCallStreamChannels req = new TLRPC.TL_phone_getGroupCallStreamChannels();
+					req.call = groupCall.getInputGroupCall();
+					if (groupCall == null || groupCall.call == null || tgVoip[type] == null) {
+						if (tgVoip[type] != null) {
+							tgVoip[type].onRequestTimeComplete(taskPtr, 0);
+						}
+						return;
+					}
+					ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error, responseTime) -> {
+						long currentTime = 0;
+						if (error == null) {
+							TLRPC.TL_phone_groupCallStreamChannels res = (TLRPC.TL_phone_groupCallStreamChannels) response;
+							if (!res.channels.isEmpty()) {
+								currentTime = res.channels.get(0).last_timestamp_ms;
+							}
+							if (!groupCall.loadedRtmpStreamParticipant) {
+								groupCall.createRtmpStreamParticipant(res.channels);
+								groupCall.loadedRtmpStreamParticipant = true;
+							}
+						}
+						if (tgVoip[type] != null) {
+							tgVoip[type].onRequestTimeComplete(taskPtr, currentTime);
+						}
+					}, ConnectionsManager.RequestFlagFailOnServerErrors, ConnectionsManager.ConnectionTypeDownload, groupCall.call.stream_dc_id);
+				} else {
+					if (tgVoip[type] != null) {
+						tgVoip[type].onRequestTimeComplete(taskPtr, ConnectionsManager.getInstance(currentAccount).getCurrentTimeMillis());
+					}
+				}
+			});
+			tgVoip[type].setOnStateUpdatedListener((state, inTransition) -> updateConnectionState(type, state, inTransition));
+		}
+		tgVoip[type].resetGroupInstance(!created, false);
+		if (captureDevice[type] != 0) {
+			destroyCaptureDevice[type] = false;
+		}
+		if (type == CAPTURE_DEVICE_CAMERA) {
+			dispatchStateChanged(STATE_WAIT_INIT);
+		}
+	}
 
     private void updateConnectionState(int type, int state, boolean inTransition) {
         if (type != CAPTURE_DEVICE_CAMERA) {
@@ -2940,8 +2978,13 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
         if (photo != null) {
             builder.setLargeIcon(photo);
         }
-        startForeground(ID_ONGOING_CALL_NOTIFICATION, builder.getNotification());
-    }
+        try {startForeground(ID_ONGOING_CALL_NOTIFICATION, builder.getNotification());
+    }catch (Exception e) {
+			if (photo != null && e instanceof IllegalArgumentException) {
+				showNotification(name, null);
+			}
+		}
+	}
 
     private void startRingtoneAndVibration(long userId) {
         SharedPreferences prefs = MessagesController.getNotificationsSettings(currentAccount);
@@ -3615,11 +3658,23 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("configureDeviceForCall, route to set = " + audioRouteToSet);
         }
-        needPlayEndSound = true;
+        if (Build.VERSION.SDK_INT >= 21) {
+			WebRtcAudioTrack.setAudioTrackUsageAttribute(hasRtmpStream() ? AudioAttributes.USAGE_MEDIA : AudioAttributes.USAGE_VOICE_COMMUNICATION);
+			WebRtcAudioTrack.setAudioStreamType(hasRtmpStream() ? AudioManager.USE_DEFAULT_STREAM_TYPE : AudioManager.STREAM_VOICE_CALL);
+		}needPlayEndSound = true;
         AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
         if (!USE_CONNECTION_SERVICE) {
             Utilities.globalQueue.postRunnable(() -> {
-                try {
+                try {if (hasRtmpStream()) {
+						am.setMode(AudioManager.MODE_NORMAL);
+						am.setBluetoothScoOn(false);
+						AndroidUtilities.runOnUIThread(() -> {
+							if (!MediaController.getInstance().isMessagePaused()) {
+								MediaController.getInstance().pauseMessage(MediaController.getInstance().getPlayingMessageObject());
+							}
+						});
+						return;
+					}
                     am.setMode(AudioManager.MODE_IN_COMMUNICATION);
                 } catch (Exception e) {
                     FileLog.e(e);
@@ -3767,12 +3822,12 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
                 if (BuildVars.LOGS_ENABLED) {
                     FileLog.d("SCO already active, setting audio routing");
                 }
-                am.setSpeakerphoneOn(false);
+                if (!hasRtmpStream()) {am.setSpeakerphoneOn(false);
                 am.setBluetoothScoOn(true);
-            } else {
+            }} else {
                 if (BuildVars.LOGS_ENABLED) {
                     FileLog.d("startBluetoothSco");
-                }
+                }if (!hasRtmpStream()) {
                 needSwitchToBluetoothAfterScoActivates = true;
                 AndroidUtilities.runOnUIThread(() -> {
                     try {
@@ -3782,7 +3837,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
                     }
                 }, 500);
             }
-        } else {
+        }} else {
             bluetoothScoActive = false;
             bluetoothScoConnecting = false;
         }
@@ -4334,7 +4389,10 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
     }
 
     public void updateOutputGainControlState() {
-        if (tgVoip[CAPTURE_DEVICE_CAMERA] != null) {
+        if (hasRtmpStream()) {
+			return;
+		}
+		if (tgVoip[CAPTURE_DEVICE_CAMERA] != null) {
             if (!USE_CONNECTION_SERVICE) {
                 final AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
                 tgVoip[CAPTURE_DEVICE_CAMERA].setAudioOutputGainControlEnabled(hasEarpiece() && !am.isSpeakerphoneOn() && !am.isBluetoothScoOn() && !isHeadsetPlugged);

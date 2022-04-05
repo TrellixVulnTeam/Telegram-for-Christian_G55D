@@ -25,6 +25,7 @@ public class NativeInstance {
     private VideoSourcesCallback unknownParticipantsCallback;
     private RequestBroadcastPartCallback requestBroadcastPartCallback;
     private RequestBroadcastPartCallback cancelRequestBroadcastPartCallback;
+    private RequestCurrentTimeCallback requestCurrentTimeCallback;
     private float[] temp = new float[1];
 
     private boolean isGroup;
@@ -50,6 +51,10 @@ public class NativeInstance {
         void run(long timestamp, long duration, int videoChannel, int quality);
     }
 
+    public interface RequestCurrentTimeCallback {
+        void run(long taskPtr);
+    }
+
     public static NativeInstance make(String version, Instance.Config config, String path, Instance.Endpoint[] endpoints, Instance.Proxy proxy, int networkType, Instance.EncryptionKey encryptionKey, VideoSink remoteSink, long videoCapturer, AudioLevelsCallback audioLevelsCallback) {
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("create new tgvoip instance, version " + version);
@@ -62,7 +67,7 @@ public class NativeInstance {
         return instance;
     }
 
-    public static NativeInstance makeGroup(String logPath, long videoCapturer, boolean screencast, boolean noiseSupression, PayloadCallback payloadCallback, AudioLevelsCallback audioLevelsCallback, VideoSourcesCallback unknownParticipantsCallback, RequestBroadcastPartCallback requestBroadcastPartCallback, RequestBroadcastPartCallback cancelRequestBroadcastPartCallback) {
+    public static NativeInstance makeGroup(String logPath, long videoCapturer, boolean screencast, boolean noiseSupression, PayloadCallback payloadCallback, AudioLevelsCallback audioLevelsCallback, VideoSourcesCallback unknownParticipantsCallback, RequestBroadcastPartCallback requestBroadcastPartCallback, RequestBroadcastPartCallback cancelRequestBroadcastPartCallback, RequestCurrentTimeCallback requestCurrentTimeCallback) {
         ContextUtils.initialize(ApplicationLoader.applicationContext);
         NativeInstance instance = new NativeInstance();
         instance.payloadCallback = payloadCallback;
@@ -70,6 +75,7 @@ public class NativeInstance {
         instance.unknownParticipantsCallback = unknownParticipantsCallback;
         instance.requestBroadcastPartCallback = requestBroadcastPartCallback;
         instance.cancelRequestBroadcastPartCallback = cancelRequestBroadcastPartCallback;
+        instance.requestCurrentTimeCallback = requestCurrentTimeCallback;
         instance.isGroup = true;
         instance.nativePtr = makeGroupNativeInstance(instance, logPath, SharedConfig.disableVoiceAudioEffects, videoCapturer, screencast, noiseSupression);
         return instance;
@@ -134,10 +140,7 @@ public class NativeInstance {
         if (isGroup && uids != null && uids.length == 0) {
             return;
         }
-        AndroidUtilities.runOnUIThread(() -> {
-            if (audioLevelsCallback != null)
-                audioLevelsCallback.run(uids, levels, voice);
-        });
+        AndroidUtilities.runOnUIThread(() -> audioLevelsCallback.run(uids, levels, voice));
     }
 
     private void onParticipantDescriptionsRequired(long taskPtr, int[] ssrcs) {
@@ -149,32 +152,30 @@ public class NativeInstance {
 
     private void onEmitJoinPayload(String json, int ssrc) {
         try {
-            if (payloadCallback != null)
-                AndroidUtilities.runOnUIThread(() -> payloadCallback.run(ssrc, json));
+            AndroidUtilities.runOnUIThread(() -> payloadCallback.run(ssrc, json));
         } catch (Exception e) {
             FileLog.e(e);
         }
     }
 
     private void onRequestBroadcastPart(long timestamp, long duration, int videoChannel, int quality) {
-        if (requestBroadcastPartCallback != null)
-            requestBroadcastPartCallback.run(timestamp, duration, videoChannel, quality);
+        requestBroadcastPartCallback.run(timestamp, duration, videoChannel, quality);
     }
 
     private void onCancelRequestBroadcastPart(long timestamp, int videoChannel, int quality) {
-        if (cancelRequestBroadcastPartCallback != null)
-            cancelRequestBroadcastPartCallback.run(timestamp, 0, 0, 0);
+        cancelRequestBroadcastPartCallback.run(timestamp, 0, 0, 0);
+    }
+
+    private void requestCurrentTime(long taskPtr) {
+        requestCurrentTimeCallback.run(taskPtr);
     }
 
     public native void setJoinResponsePayload(String payload);
-
-    public native void prepareForStream();
-
+    public native void prepareForStream(boolean isRtpStream);
     public native void resetGroupInstance(boolean set, boolean disconnect);
 
     private Instance.FinalState finalState;
     private CountDownLatch stopBarrier;
-
     private void onStop(Instance.FinalState state) {
         finalState = state;
         if (stopBarrier != null) {
@@ -198,72 +199,40 @@ public class NativeInstance {
     }
 
     private static native long makeGroupNativeInstance(NativeInstance instance, String persistentStateFilePath, boolean highQuality, long videoCapturer, boolean screencast, boolean noiseSupression);
-
     private static native long makeNativeInstance(String version, NativeInstance instance, Instance.Config config, String persistentStateFilePath, Instance.Endpoint[] endpoints, Instance.Proxy proxy, int networkType, Instance.EncryptionKey encryptionKey, VideoSink remoteSink, long videoCapturer, float aspectRatio);
-
     public static native long createVideoCapturer(VideoSink localSink, int type);
-
     public static native void setVideoStateCapturer(long videoCapturer, int videoState);
-
     public static native void switchCameraCapturer(long videoCapturer, boolean front);
-
     public static native void destroyVideoCapturer(long videoCapturer);
 
     public native void onMediaDescriptionAvailable(long taskPtr, int[] ssrcs);
-
     public native void setNoiseSuppressionEnabled(boolean value);
-
     public native void activateVideoCapturer(long videoCapturer);
-
     public native void clearVideoCapturer();
-
     public native long addIncomingVideoOutput(int quality, String endpointId, SsrcGroup[] ssrcGroups, VideoSink remoteSink);
-
     public native void removeIncomingVideoOutput(long nativeRemoteSink);
-
     public native void setVideoEndpointQuality(String endpointId, int quality);
-
     public native void setGlobalServerConfig(String serverConfigJson);
-
     public native void setBufferSize(int size);
-
     public native String getVersion();
-
     public native void setNetworkType(int networkType);
-
     public native void setMuteMicrophone(boolean muteMicrophone);
-
     public native void setVolume(int ssrc, double volume);
-
     public native void setAudioOutputGainControlEnabled(boolean enabled);
-
     public native void setEchoCancellationStrength(int strength);
-
     public native String getLastError();
-
     public native String getDebugInfo();
-
     public native long getPreferredRelayId();
-
     public native Instance.TrafficStats getTrafficStats();
-
     public native byte[] getPersistentState();
-
     private native void stopNative();
-
     private native void stopGroupNative();
-
     public native void setupOutgoingVideo(VideoSink localSink, int type);
-
     public native void setupOutgoingVideoCreated(long videoCapturer);
-
     public native void switchCamera(boolean front);
-
     public native void setVideoState(int videoState);
-
     public native void onSignalingDataReceive(byte[] data);
-
     public native void onStreamPartAvailable(long ts, ByteBuffer buffer, int size, long timestamp, int videoChannel, int quality);
-
     public native boolean hasVideoCapturer();
+    public native void onRequestTimeComplete(long taskPtr, long time);
 }
