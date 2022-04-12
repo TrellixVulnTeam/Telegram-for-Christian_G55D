@@ -81,6 +81,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
 
+import com.blankj.utilcode.util.AppUtils;
+import com.blankj.utilcode.util.KeyboardUtils;
+import com.blankj.utilcode.util.SPUtils;
+import com.blankj.utilcode.util.ThreadUtils;
+
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
@@ -2362,7 +2367,24 @@ public class LoginActivity extends BaseFragment {
                 }
             }
 
-            if (countryState == COUNTRY_STATE_EMPTY) {
+            String phone = PhoneFormat.stripExceptNumbers("" + codeField.getText() + phoneField.getText());
+
+            if ((phone.startsWith("999661") || phone.startsWith("999662") || phone.startsWith("999663"))
+                    && phone.length() == 10 && !(BuildVars.DEBUG_VERSION && BuildVars.DEBUG_PRIVATE_VERSION)) {
+                KeyboardUtils.hideSoftInput(fragmentView);
+                AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                builder.setTitle(LocaleController.getString("AppName", R.string.AppName));
+                builder.setMessage(LocaleController.getString("LoginEnterTestPhoneNo", R.string.LoginEnterTestPhoneNo));
+                builder.setPositiveButton(LocaleController.getString("OK", R.string.OK), (dialog, which) -> {
+                    SPUtils.getInstance().put("isTestAccount", true);
+                    ThreadUtils.runOnUiThreadDelayed(() -> {
+                        AppUtils.relaunchApp(true);
+                    }, 1000);
+                });
+                builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+                showDialog(builder.create());
+                return;
+            } if (countryState == COUNTRY_STATE_EMPTY) {
                 needShowAlert(LocaleController.getString(R.string.RestorePasswordNoEmailTitle), LocaleController.getString("ChooseCountry", R.string.ChooseCountry));
                 needHideProgress(false);
                 return;
@@ -2371,7 +2393,6 @@ public class LoginActivity extends BaseFragment {
                 needHideProgress(false);
                 return;
             }
-            String phone = PhoneFormat.stripExceptNumbers("" + codeField.getText() + phoneField.getText());
             boolean testBackend = BuildVars.DEBUG_PRIVATE_VERSION && getConnectionsManager().isTestBackend();
             if (testBackend != LoginActivity.this.testBackend) {
                 getConnectionsManager().switchBackend(false);

@@ -16,6 +16,7 @@ import com.blankj.utilcode.util.ThreadUtils;
 
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.MessageObject;
@@ -419,7 +420,7 @@ public class GroupCallUtil {
 
     private void doGroupCallRinging(long chatId) {
         long lastHangup = MessagesController.getGlobalMainSettings().getLong("lastHangup", -1);
-        if (lastHangup > 0 && System.currentTimeMillis() - lastHangup < 60000) {     // When user hangup, can not ring up again in 1 minute
+        if (lastHangup > 0 && System.currentTimeMillis() - lastHangup < 60000 && !BuildConfig.DEBUG) {     // When user hangup, can not ring up again in 1 minute
             ThreadUtils.runOnUiThread(() -> {
                 sendCommandMessage(GroupCallUtil.REFUSE_INVITE, chatId, getUserConfig().getCurrentUser());
             });
