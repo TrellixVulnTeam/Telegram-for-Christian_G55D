@@ -419,13 +419,6 @@ public class GroupCallUtil {
     }
 
     private void doGroupCallRinging(long chatId) {
-        long lastHangup = MessagesController.getGlobalMainSettings().getLong("lastHangup", -1);
-        if (lastHangup > 0 && System.currentTimeMillis() - lastHangup < 60000 && !BuildConfig.DEBUG) {     // When user hangup, can not ring up again in 1 minute
-            ThreadUtils.runOnUiThread(() -> {
-                sendCommandMessage(GroupCallUtil.REFUSE_INVITE, chatId, getUserConfig().getCurrentUser());
-            });
-            return;
-        }
 
         boolean notificationsDisabled = false;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && !NotificationManagerCompat.from(ApplicationLoader.applicationContext).areNotificationsEnabled()) {

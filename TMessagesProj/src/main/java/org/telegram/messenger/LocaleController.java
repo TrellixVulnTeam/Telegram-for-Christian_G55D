@@ -369,7 +369,7 @@ public class LocaleController {
         languages.add(localeInfo);
         languagesDict.put(localeInfo.shortName, localeInfo);
 
-        /*localeInfo = new LocaleInfo();
+        localeInfo = new LocaleInfo();
         localeInfo.name = "ไทย";
         localeInfo.nameEnglish = "Thai";
         localeInfo.pluralLangCode = "th";
@@ -377,7 +377,7 @@ public class LocaleController {
         localeInfo.pathToFile = null;
         localeInfo.builtIn = true;
         languages.add(localeInfo);
-        languagesDict.put(localeInfo.shortName, localeInfo);*/
+        languagesDict.put(localeInfo.shortName, localeInfo);
 
         localeInfo = new LocaleInfo();
         localeInfo.name = "ລາວ";

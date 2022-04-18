@@ -3046,7 +3046,6 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("=============== VoIPService STOPPING ===============");
         }
-        LogUtils.d("voip service destory");
         stopForeground(true);
         stopRinging();
         if (currentAccount >= 0) {

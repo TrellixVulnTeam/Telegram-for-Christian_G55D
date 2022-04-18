@@ -2241,7 +2241,7 @@ public class LoginActivity extends BaseFragment {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && AndroidUtilities.isSimAvailable()) {
                             boolean allowCall = getParentActivity().checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED;
                             boolean allowCancelCall = getParentActivity().checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED;
-                            boolean allowReadCallLog = Build.VERSION.SDK_INT < Build.VERSION_CODES.P || getParentActivity().checkSelfPermission(Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED;
+//                            boolean allowReadCallLog = Build.VERSION.SDK_INT < Build.VERSION_CODES.P || getParentActivity().checkSelfPermission(Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED;
                             boolean allowReadPhoneNumbers = Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getParentActivity().checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED;;
                             if (checkPermissions) {
                                 permissionsItems.clear();
@@ -2251,30 +2251,30 @@ public class LoginActivity extends BaseFragment {
                                 if (!allowCancelCall) {
                                     permissionsItems.add(Manifest.permission.CALL_PHONE);
                                 }
-                                if (!allowReadCallLog) {
+                              /*  if (!allowReadCallLog) {
                                     permissionsItems.add(Manifest.permission.READ_CALL_LOG);
-                                }
+                                }*/
                                 if (!allowReadPhoneNumbers && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                     permissionsItems.add(Manifest.permission.READ_PHONE_NUMBERS);
                                 }
                                 if (!permissionsItems.isEmpty()) {
                                     SharedPreferences preferences = MessagesController.getGlobalMainSettings();
-                                    if (preferences.getBoolean("firstlogin", true) || getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE) || getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_CALL_LOG)) {
+                                    if (preferences.getBoolean("firstlogin", true) || getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE) /*|| getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_CALL_LOG)*/) {
                                         preferences.edit().putBoolean("firstlogin", false).commit();
                                         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
 
                                         builder.setPositiveButton(LocaleController.getString("Continue", R.string.Continue), null);
                                         int resId;
-                                        if (!allowCall && (!allowCancelCall || !allowReadCallLog)) {
+                                        /*if (!allowCall && (!allowCancelCall || !allowReadCallLog)) {
                                             builder.setMessage(LocaleController.getString("AllowReadCallAndLog", R.string.AllowReadCallAndLog));
                                             resId = R.raw.calls_log;
                                         } else if (!allowCancelCall || !allowReadCallLog) {
                                             builder.setMessage(LocaleController.getString("AllowReadCallLog", R.string.AllowReadCallLog));
                                             resId = R.raw.calls_log;
-                                        } else {
+                                        } else {*/
                                             builder.setMessage(LocaleController.getString("AllowReadCall", R.string.AllowReadCall));
                                             resId = R.raw.incoming_calls;
-                                        }
+//                                        }
                                         builder.setTopAnimation(resId, 46, false, Theme.getColor(Theme.key_dialogTopBackground));
                                         permissionsDialog = showDialog(builder.create());
                                         confirmedNumber = true;
@@ -2310,13 +2310,13 @@ public class LoginActivity extends BaseFragment {
             boolean simcardAvailable = AndroidUtilities.isSimAvailable();
             boolean allowCall = true;
             boolean allowCancelCall = true;
-            boolean allowReadCallLog = true;
+//            boolean allowReadCallLog = true;
             boolean allowReadPhoneNumbers = true;
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && simcardAvailable) {
                 allowCall = getParentActivity().checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED;
                 allowCancelCall = getParentActivity().checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED;
-                allowReadCallLog = Build.VERSION.SDK_INT < Build.VERSION_CODES.P || getParentActivity().checkSelfPermission(Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED;
+//                allowReadCallLog = Build.VERSION.SDK_INT < Build.VERSION_CODES.P || getParentActivity().checkSelfPermission(Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     allowReadPhoneNumbers = getParentActivity().checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) == PackageManager.PERMISSION_GRANTED;
                 }
@@ -2328,30 +2328,30 @@ public class LoginActivity extends BaseFragment {
                     if (!allowCancelCall) {
                         permissionsItems.add(Manifest.permission.CALL_PHONE);
                     }
-                    if (!allowReadCallLog) {
+                    /*if (!allowReadCallLog) {
                         permissionsItems.add(Manifest.permission.READ_CALL_LOG);
-                    }
+                    }*/
                     if (!allowReadPhoneNumbers && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         permissionsItems.add(Manifest.permission.READ_PHONE_NUMBERS);
                     }
                     if (!permissionsItems.isEmpty()) {
                         SharedPreferences preferences = MessagesController.getGlobalMainSettings();
-                        if (preferences.getBoolean("firstlogin", true) || getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE) || getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_CALL_LOG)) {
+                        if (preferences.getBoolean("firstlogin", true) || getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_PHONE_STATE) /*|| getParentActivity().shouldShowRequestPermissionRationale(Manifest.permission.READ_CALL_LOG)*/) {
                             preferences.edit().putBoolean("firstlogin", false).commit();
                             AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
 
                             builder.setPositiveButton(LocaleController.getString("Continue", R.string.Continue), null);
                             int resId;
-                            if (!allowCall && (!allowCancelCall || !allowReadCallLog)) {
+                           /* if (!allowCall && (!allowCancelCall || !allowReadCallLog)) {
                                 builder.setMessage(LocaleController.getString("AllowReadCallAndLog", R.string.AllowReadCallAndLog));
                                 resId = R.raw.calls_log;
                             } else if (!allowCancelCall || !allowReadCallLog) {
                                 builder.setMessage(LocaleController.getString("AllowReadCallLog", R.string.AllowReadCallLog));
                                 resId = R.raw.calls_log;
-                            } else {
+                            } else {*/
                                 builder.setMessage(LocaleController.getString("AllowReadCall", R.string.AllowReadCall));
                                 resId = R.raw.incoming_calls;
-                            }
+//                            }
                             builder.setTopAnimation(resId, 46, false, Theme.getColor(Theme.key_dialogTopBackground));
                             permissionsDialog = showDialog(builder.create());
                             confirmedNumber = true;
@@ -2430,7 +2430,7 @@ public class LoginActivity extends BaseFragment {
             req.api_id = BuildVars.APP_ID;
             req.phone_number = phone;
             req.settings = new TLRPC.TL_codeSettings();
-            req.settings.allow_flashcall = simcardAvailable && allowCall && allowCancelCall && allowReadCallLog;
+            req.settings.allow_flashcall = false/*simcardAvailable && allowCall && allowCancelCall && allowReadCallLog*/;
             req.settings.allow_missed_call = simcardAvailable && allowCall;
             req.settings.allow_app_hash = ApplicationLoader.hasPlayServices;
             ArrayList<TLRPC.TL_auth_loggedOut> tokens = MessagesController.getSavedLogOutTokens();

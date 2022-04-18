@@ -2794,7 +2794,7 @@ public class MessagesController extends BaseController implements NotificationCe
         }
 
         addSupportUser();
-        AndroidUtilities.runOnUIThread(()->{
+        AndroidUtilities.runOnUIThread(() -> {
             getNotificationCenter().postNotificationName(NotificationCenter.suggestedFiltersLoaded);
             getNotificationCenter().postNotificationName(NotificationCenter.dialogFiltersUpdated);
             getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload);
@@ -13510,7 +13510,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         }
                         // group call ended
                         if (update.call instanceof TLRPC.TL_groupCallDiscarded) {
-                            if (VoIPService.getSharedInstance() != null && VoIPService.getSharedInstance().isGroupCallRinging())
+                            if (VoIPService.getSharedInstance() != null)
                                 VoIPService.getSharedInstance().endGroupCallRinging();
 
                             TLRPC.Chat chat = getChat(update.chat_id);
